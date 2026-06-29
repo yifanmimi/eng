@@ -213,6 +213,7 @@
           <div class="flex items-center space-x-1.5">
             <span class="text-xs text-slate-400 font-bold">排序:</span>
             <select id="sort-select" onchange="handleSortChange()" class="text-xs font-semibold bg-slate-100 rounded-xl px-3 py-2 text-slate-700 focus:outline-none">
+              <option value="starred-first">⭐ 優先顯示星號</option>
               <option value="time-desc">時間：新 ➔ 舊</option>
               <option value="time-asc">時間：舊 ➔ 新</option>
               <option value="alpha-asc">字母：A ➔ Z</option>
@@ -640,17 +641,40 @@
 
     function handleSortChange() { handleSortChange; renderWordsGrid(); }
 
+    // 升級版：前端陣列排序核心引擎（新增星號優先排序邏輯）
     function sortWordsArray(array) {
       return [...array].sort((a, b) => {
+        // 先計算答對率備用
         const accA = (a.correct_count + a.wrong_count) > 0 ? (a.correct_count / (a.correct_count + a.wrong_count)) : 0;
         const accB = (b.correct_count + b.wrong_count) > 0 ? (b.correct_count / (b.correct_count + b.wrong_count)) : 0;
+        
         switch(document.getElementById('sort-select').value) {
-          case 'time-asc': return Number(a.id) - Number(b.id);
-          case 'alpha-asc': return a.word.localeCompare(b.word);
-          case 'alpha-desc': return b.word.localeCompare(a.word);
-          case 'accuracy-asc': return accA - accB;
-          case 'accuracy-desc': return accB - accA;
-          case 'time-desc': default: return Number(b.id) - Number(a.id);
+          case 'starred-first':
+            // 布林值排序：true (有星號) 排在 false (沒星號) 前面
+            // 在 JavaScript 中，true - false 等於 -1，會往前排
+            if (a.is_starred && !b.is_starred) return -1;
+            if (!a.is_starred && b.is_starred) return 1;
+            // 如果星號狀態相同，則預設依時間新到舊排序
+            return Number(b.id) - Number(a.id);
+            
+          case 'time-asc': 
+            return Number(a.id) - Number(b.id);
+            
+          case 'alpha-asc': 
+            return a.word.localeCompare(b.word);
+            
+          case 'alpha-desc': 
+            return b.word.localeCompare(a.word);
+            
+          case 'accuracy-asc': 
+            return accA - accB;
+            
+          case 'accuracy-desc': 
+            return accB - accA;
+            
+          case 'time-desc':
+          default:
+            return Number(b.id) - Number(a.id);
         }
       });
     }
