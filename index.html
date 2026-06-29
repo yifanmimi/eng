@@ -918,7 +918,35 @@
     function submitChoiceAnswer(selectedOpt, btnElement) { if (state.quiz.isAnswered) return; state.quiz.isAnswered = true; const currentQ = state.quiz.questions[state.quiz.currentIndex]; const feedback = document.getElementById('quiz-feedback'); const optionButtons = document.getElementById('quiz-options-container').querySelectorAll('button'); if (selectedOpt.id === currentQ.id) { state.quiz.score++; btnElement.className = "w-full text-left p-4 rounded-xl border-2 border-emerald-500 bg-emerald-50/20 text-emerald-800 font-bold text-sm flex items-center justify-between"; feedback.className = "p-4 rounded-xl text-center font-bold text-sm bg-emerald-50 text-emerald-700 flex items-center justify-center space-x-2"; document.getElementById('quiz-feedback-icon').innerText = "🎉"; document.getElementById('quiz-feedback-text').innerText = "恭喜答對！"; updateWordAccuracy(currentQ.id, true); } else { btnElement.className = "w-full text-left p-4 rounded-xl border-2 border-rose-500 bg-rose-50/20 text-rose-800 font-bold text-sm flex items-center justify-between"; feedback.className = "p-4 rounded-xl text-center font-bold text-sm bg-rose-50 text-rose-700 flex items-center justify-center space-x-2"; document.getElementById('quiz-feedback-icon').innerText = "❌"; document.getElementById('quiz-feedback-text').innerText = `正解：${currentQ.translation}`; updateWordAccuracy(currentQ.id, false); optionButtons.forEach(btn => { if (btn.innerText.includes(currentQ.translation)) btn.className = "w-full text-left p-4 rounded-xl border-2 border-emerald-500 text-emerald-700 font-bold text-sm"; }); } feedback.classList.remove('hidden'); document.getElementById('quiz-next-btn').classList.remove('hidden'); }
     function submitSpellingAnswer() { if (state.quiz.isAnswered) return; state.quiz.isAnswered = true; const currentQ = state.quiz.questions[state.quiz.currentIndex]; const inputEl = document.getElementById('quiz-spelling-input'); const feedback = document.getElementById('quiz-feedback'); inputEl.disabled = true; if (inputEl.value.trim().toLowerCase() === currentQ.word.trim().toLowerCase()) { state.quiz.score++; inputEl.className = "w-full text-center font-bold text-lg rounded-xl border-2 border-emerald-500 bg-emerald-50/10 text-emerald-600 px-4 py-3"; feedback.className = "p-4 rounded-xl text-center font-bold text-sm bg-emerald-50 text-emerald-700 flex items-center justify-center space-x-2"; document.getElementById('quiz-feedback-icon').innerText = "🏆"; document.getElementById('quiz-feedback-text').innerText = "完全正確！"; updateWordAccuracy(currentQ.id, true); } else { inputEl.className = "w-full text-center font-bold text-lg rounded-xl border-2 border-rose-500 bg-rose-50/10 text-rose-600 px-4 py-3"; feedback.className = "p-4 rounded-xl text-center font-bold text-sm bg-rose-50 text-rose-700 flex items-center justify-center space-x-2"; document.getElementById('quiz-feedback-icon').innerText = "❌"; document.getElementById('quiz-feedback-text').innerText = `正確拼寫為 [ ${currentQ.word} ]`; updateWordAccuracy(currentQ.id, false); } feedback.classList.remove('hidden'); document.getElementById('quiz-next-btn').classList.remove('hidden'); }
     function handleSpellingEnter(e) { if (e.key === 'Enter') submitSpellingAnswer(); }
-    async function updateWordAccuracy(id, isCorrect) { const idx = state.words.findIndex(w => w.id == id); if (idx !== -1) { if (isCorrect) state.words[idx].correct_count++; else state.words[idx].wrong_count++; } try { await callGasApi("recordScore", { id: id, isCorrect: isCorrect }); } catch (e) {} }
+
+    // 修正版：計算完最新對錯次數後，直接把包好的數據整組傳給後端
+    async function updateWordAccuracy(id, isCorrect) {
+      const idx = state.words.findIndex(w => w.id == id);
+      if (idx !== -1) { 
+        if (isCorrect) {
+          state.words[idx].correct_count++; 
+        } else {
+          state.words[idx].wrong_count++; 
+        }
+        
+        // 抓出最新的對錯數值
+        const currentCorrect = state.words[idx].correct_count;
+        const currentWrong = state.words[idx].wrong_count;
+        
+        try { 
+          // 發送給後端 recordScore 動作，並把最新的計數傳過去
+          await callGasApi("recordScore", { 
+            id: id, 
+            correct_count: currentCorrect,
+            wrong_count: currentWrong
+          }); 
+        } catch (e) {
+          console.error("同步對錯紀錄至雲端失敗", e);
+        }
+      }
+    }
+    
+    
     function advanceQuiz() { state.quiz.currentIndex++; if (state.quiz.currentIndex < state.quiz.questions.length) renderQuizQuestion(); else { document.getElementById('quiz-panel').classList.add('hidden'); document.getElementById('quiz-result').classList.remove('hidden'); document.getElementById('res-total').innerText = `${state.quiz.questions.length} 題`; document.getElementById('res-correct').innerText = `${state.quiz.score} 題`; document.getElementById('res-score').innerText = `${Math.round((state.quiz.score / state.quiz.questions.length) * 100)} 分`; } }
     function exitQuiz() { document.getElementById('quiz-panel').classList.add('hidden'); document.getElementById('quiz-result').classList.add('hidden'); document.getElementById('quiz-empty-state').classList.add('hidden'); document.getElementById('quiz-setup').classList.remove('hidden'); }
   </script>
