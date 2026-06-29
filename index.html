@@ -889,16 +889,37 @@
     function setQuizScope(scope) { state.quiz.scope = scope; document.getElementById('qz-scope-all').className = scope==='all'?'border border-brand-500 bg-brand-50/20 text-brand-700 py-2.5 rounded-xl text-xs font-bold':'border border-slate-200 text-slate-500 py-2.5 rounded-xl text-xs font-bold'; document.getElementById('qz-scope-starred').className = scope==='starred'?'border border-brand-500 bg-brand-50/20 text-brand-700 py-2.5 rounded-xl text-xs font-bold':'border border-slate-200 text-slate-500 py-2.5 rounded-xl text-xs font-bold'; }
 
     function startQuiz() {
+      // 修正點：開始測驗時，即時抓取目前下拉選單真正選中的資料夾名稱
       const chosenQuizFolder = document.getElementById('quiz-folder-select').value;
       let pool = state.words;
-      if (chosenQuizFolder && chosenQuizFolder !== 'ALL_WORDS') pool = pool.filter(w => w.folder === chosenQuizFolder);
-      if (state.quiz.scope === 'starred') pool = pool.filter(w => w.is_starred);
-      if (pool.length < (state.quiz.mode === 'choice' ? 4 : 1)) { document.getElementById('quiz-setup').classList.add('hidden'); document.getElementById('quiz-empty-state').classList.remove('hidden'); return; }
+      
+      if (chosenQuizFolder && chosenQuizFolder !== 'ALL_WORDS') {
+        pool = pool.filter(w => w.folder === chosenQuizFolder);
+      }
+      if (state.quiz.scope === 'starred') {
+        pool = pool.filter(w => w.is_starred);
+      }
+
+      // 防呆提示：如果單字量不夠四選一模式，跳出警告而不是卡死
+      if (pool.length < (state.quiz.mode === 'choice' ? 4 : 1)) {
+        if (state.quiz.mode === 'choice') {
+          showToast(`該分類範圍內的單字量不足 4 個（目前僅 ${pool.length} 個），無法進行四選一測驗！`, "⚠️");
+        } else {
+          showToast("該分類範圍內沒有任何單字可以測驗！", "⚠️");
+        }
+        return;
+      }
+
       document.getElementById('quiz-empty-state').classList.add('hidden');
       const shuffled = [...pool].sort(() => 0.5 - Math.random());
       state.quiz.questions = shuffled.slice(0, Math.min(10, shuffled.length));
-      state.quiz.currentIndex = 0; state.quiz.score = 0; state.quiz.isAnswered = false;
-      document.getElementById('quiz-setup').classList.add('hidden'); document.getElementById('quiz-result').classList.add('hidden'); document.getElementById('quiz-panel').classList.remove('hidden');
+      state.quiz.currentIndex = 0; 
+      state.quiz.score = 0; 
+      state.quiz.isAnswered = false;
+      
+      document.getElementById('quiz-setup').classList.add('hidden'); 
+      document.getElementById('quiz-result').classList.add('hidden'); 
+      document.getElementById('quiz-panel').classList.remove('hidden');
       renderQuizQuestion();
     }
 
