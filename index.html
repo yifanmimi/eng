@@ -241,11 +241,17 @@
         <div class="md:col-span-9 space-y-4">
           
           <div id="batch-control-bar" class="bg-indigo-50/50 border border-indigo-100 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
-        <div class="flex items-center space-x-3">
-          <label class="flex items-center space-x-2 font-semibold text-slate-600 cursor-pointer select-none">
+        <div class="flex flex-wrap items-center gap-4">
+          <label class="flex items-center space-x-1.5 font-semibold text-slate-600 cursor-pointer select-none">
             <input type="checkbox" id="select-all-checkbox" onchange="toggleSelectAllWords(this.checked)" class="rounded text-brand-600 focus:ring-brand-500 h-4 w-4">
-            <span>全選目前檢視單字</span>
+            <span>全選目前單字</span>
           </label>
+          
+          <label class="flex items-center space-x-1.5 font-semibold text-amber-600 cursor-pointer select-none border-l border-slate-200 pl-4">
+            <input type="checkbox" id="select-starred-checkbox" onchange="toggleSelectStarredWords(this.checked)" class="rounded text-amber-500 focus:ring-amber-400 h-4 w-4">
+            <span>⭐ 全選目前星號單字</span>
+          </label>
+          
           <span id="selected-count-text" class="text-indigo-600 font-bold hidden">已選取 0 個單字</span>
         </div>
         
