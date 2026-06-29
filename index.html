@@ -492,9 +492,23 @@
       const activeBtn = document.getElementById(`btn-tab-${tabName}`);
       if (activeBtn) activeBtn.className = "tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center space-x-2 bg-brand-50 text-brand-600";
 
-      document.querySelectorAll('.m-tab-btn').forEach(btn => btn.className = "m-tab-btn flex flex-col items-center space-y-0.5 text-slate-400");
+      // 修正點：手機端按鈕與 span 文字變色修正，防止手機版文字變空白
+      document.querySelectorAll('.m-tab-btn').forEach(btn => {
+        btn.className = "m-tab-btn flex flex-col items-center space-y-0.5 text-slate-400";
+        const txtSpan = btn.querySelector('span');
+        if (txtSpan) {
+          txtSpan.className = "text-[10px] text-slate-400 font-medium";
+        }
+      });
+      
       const mActiveBtn = document.getElementById(`m-btn-tab-${tabName}`);
-      if (mActiveBtn) mActiveBtn.className = "m-tab-btn flex flex-col items-center space-y-0.5 text-brand-600 font-medium";
+      if (mActiveBtn) {
+        mActiveBtn.className = "m-tab-btn flex flex-col items-center space-y-0.5 text-brand-600 font-medium";
+        const activeSpan = mActiveBtn.querySelector('span');
+        if (activeSpan) {
+          activeSpan.className = "text-[10px] text-brand-600 font-bold";
+        }
+      }
 
       if (tabName === 'list') { 
         loadWordsData();
