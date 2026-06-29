@@ -496,7 +496,14 @@
 
       if (tabName === 'list') { loadWordsData(); } 
       else if (tabName === 'flashcard') { refreshFoldersUI(); initFlashcards(); } 
-      else if (tabName === 'quiz') { refreshFoldersUI(); exitQuiz(); }
+      else if (tabName === 'quiz') { 
+        refreshFoldersUI(); 
+        exitQuiz();
+        // 防呆：每次切換到測驗分頁時，將下拉選單強制預設為「全部資料夾」
+        if(document.getElementById('quiz-folder-select')) {
+          document.getElementById('quiz-folder-select').value = "ALL_WORDS";
+        }
+      }    
     }
 
     function showToast(text, icon = '💡') {
