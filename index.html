@@ -181,20 +181,16 @@
       </div>
     </section>
 
-    <!-- 網頁 2：多元單字卡片 (Tab: Flashcard) - 支援自由切換星號與全部單字 -->
     <section id="tab-content-flashcard" class="space-y-6 hidden">
       <div class="max-w-md mx-auto space-y-6">
         <div class="text-center space-y-3">
           <h3 class="font-bold text-slate-800 text-xl">🃏 智慧隨身單字卡</h3>
           
-          <!-- 升級分流控制區 -->
           <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-2.5 text-xs">
-            <!-- 1. 資料夾選取 -->
             <div class="flex items-center justify-between">
               <span class="text-slate-500 font-medium">📁 選擇資料夾：</span>
               <select id="flashcard-folder-select" onchange="resetFlashcardIndex(); initFlashcards();" class="font-semibold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-slate-700 focus:outline-none max-w-[200px]"></select>
             </div>
-            <!-- 2. 星號狀態選取 -->
             <div class="flex items-center justify-between border-t border-slate-100 pt-2">
               <span class="text-slate-500 font-medium">⭐ 篩選星號狀態：</span>
               <div class="bg-slate-100 p-0.5 rounded-lg flex">
@@ -205,10 +201,8 @@
           </div>
         </div>
 
-        <!-- 字卡 3D 翻轉區 -->
         <div onclick="flipFlashcard()" class="perspective-1000 cursor-pointer group h-72 sm:h-80 w-full">
           <div id="flashcard-element" class="relative w-full h-full transform-style-3d duration-500 ease-out shadow-lg hover:shadow-xl rounded-2xl">
-            <!-- 正面 (英文) -->
             <div class="absolute inset-0 bg-white rounded-2xl border-2 border-slate-200/60 p-6 flex flex-col justify-between backface-hidden">
               <div class="flex justify-between items-center text-slate-400 text-xs font-semibold">
                 <span>FRONT (英文面)</span>
@@ -220,7 +214,6 @@
               </div>
               <div class="text-center text-xs text-slate-400 font-semibold" id="fc-index-display">0 / 0</div>
             </div>
-            <!-- 反面 (中文/KK) -->
             <div class="absolute inset-0 bg-indigo-50/70 rounded-2xl border-2 border-indigo-200/50 p-6 flex flex-col justify-between backface-hidden rotate-y-180">
               <div class="flex justify-between items-center text-indigo-400 text-xs font-semibold">
                 <span>BACK (釋義面)</span>
@@ -237,17 +230,13 @@
         
         <p class="text-center text-[11px] text-slate-400 hidden sm:block font-medium">提示：可以使用鍵盤的 <b>[←] [→] 鍵</b> 切換，<b>[空白鍵]</b> 翻牌</p>
         
-        <!-- 控制按鈕 -->
         <div class="flex items-center justify-between gap-4">
           <button onclick="prevFlashcard()" class="flex-1 bg-white border border-slate-200 text-slate-700 font-semibold py-3 px-4 rounded-xl text-sm shadow-sm"><span>⬅ 上一個</span></button>
-          <button onclick="toggleFlashcardStarStatus(event)" id="fc-star-toggle-btn" class="p-3 bg-slate-100 text-slate-400 rounded-xl hover:bg-amber-50 transition-colors shadow-sm" title="標記/取消星號">
-            <svg class="w-5 h-5 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg>
-          </button>
+          <button onclick="toggleFlashcardStarStatus(event)" id="fc-star-toggle-btn" class="p-3 bg-slate-100 text-slate-400 rounded-xl hover:bg-amber-50 transition-colors shadow-sm"><svg class="w-5 h-5 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/></svg></button>
           <button onclick="nextFlashcard()" class="flex-1 bg-brand-600 text-white font-semibold py-3 px-4 rounded-xl text-sm shadow-md"><span>下一個 ➡</span></button>
         </div>
       </div>
       
-      <!-- 字卡空狀態 -->
       <div id="flashcard-empty-state" class="hidden text-center py-20 bg-white rounded-2xl border border-slate-200 p-8 max-w-md mx-auto">
         <p class="font-bold text-slate-700 text-lg">該篩選範圍內沒有任何單字</p>
         <p class="text-slate-400 text-sm mt-1">請嘗試切換「全部單字」或更換資料夾分類。</p>
@@ -317,6 +306,11 @@
             <button onclick="exitQuiz()" class="flex-1 border border-slate-200 py-3 rounded-xl text-sm">回到設定</button>
             <button onclick="startQuiz()" class="flex-1 bg-brand-600 text-white py-3 rounded-xl text-sm shadow-md">再挑戰一次</button>
           </div>
+        </div>
+
+        <div id="quiz-empty-state" class="hidden text-center py-20 bg-white rounded-2xl border border-slate-200 p-8">
+          <p class="mt-4 font-bold text-slate-700 text-lg">該分類資料夾下找不到可測驗的單字</p>
+          <button onclick="switchTab('input')" class="mt-6 bg-brand-600 text-white font-semibold px-5 py-2 rounded-xl text-sm">前往新增單字</button>
         </div>
       </div>
     </section>
@@ -404,7 +398,6 @@
   <script>
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyF7BPEAjEO3X9Qg3AQlGBcLPpYoJIPMgi-d1ZUrvcvlkFcwMis24Rl13nhhI2eniEj/exec";
 
-    // 核心修正：將當前預設的分頁狀態變更為 'list' (我的單字庫)
     const state = {
       currentTab: 'list', 
       words: [],           
@@ -414,7 +407,7 @@
       sortMethod: 'starred-first', 
       selectedWordIds: [],
       selectedFolder: 'ALL_WORDS', 
-      flashcardFilter: 'all',  // 新增：單字卡星號過濾狀態，'all' 顯示全部，'starred' 僅看星號
+      flashcardFilter: 'all',  
       flashcardIndex: 0,   
       quiz: { mode: 'choice', scope: 'all', folder: 'ALL_WORDS', questions: [], currentIndex: 0, score: 0, selectedAnswer: null, isAnswered: false }
     };
@@ -494,12 +487,15 @@
       const mActiveBtn = document.getElementById(`m-btn-tab-${tabName}`);
       if (mActiveBtn) mActiveBtn.className = "m-tab-btn flex flex-col items-center space-y-0.5 text-brand-600 font-medium";
 
-      if (tabName === 'list') { loadWordsData(); } 
-      else if (tabName === 'flashcard') { refreshFoldersUI(); initFlashcards(); } 
+      if (tabName === 'list') { 
+        loadWordsData();
+      } 
+      else if (tabName === 'flashcard') { 
+        refreshFoldersUI(); initFlashcards();
+      } 
       else if (tabName === 'quiz') { 
-        refreshFoldersUI(); 
+        refreshFoldersUI();
         exitQuiz();
-        // 防呆：每次切換到測驗分頁時，將下拉選單強制預設為「全部資料夾」
         if(document.getElementById('quiz-folder-select')) {
           document.getElementById('quiz-folder-select').value = "ALL_WORDS";
         }
@@ -686,7 +682,7 @@
             <p class="text-sm font-semibold text-slate-600 mt-2 border-t border-slate-50 pt-2 break-words">${item.translation}</p>
           </div>
           <div class="mt-3 flex items-center justify-between text-[10px] text-slate-400 font-medium border-t border-dashed border-slate-100 pt-2">
-            <span>正確率: ${accuracy}%</span>
+            <span>挑戰次數: ${item.correct_count + item.wrong_count} 次</span>
           </div>`;
         grid.appendChild(card);
       });
@@ -754,12 +750,9 @@
     function speakWord(text) { if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang='en-US'; u.rate=0.85; window.speechSynthesis.speak(u); } }
     async function toggleWordStar(id, currentStar) { const newStar = !currentStar; const idx = state.words.findIndex(w => w.id == id); if (idx!==-1) { state.words[idx].is_starred = newStar; renderWordsGrid(); } try { await callGasApi("toggleStar", { id: id, isStarred: newStar }); } catch(e){} }
 
-    // ...前面是單字庫管理、刪除等功能...
-
     // ==========================================
-    // 智慧隨身單字卡（全面升級版控制邏輯）
+    // 智慧隨身單字卡控制邏輯
     // ==========================================
-    
     function setFlashcardStarFilter(type) {
       state.flashcardFilter = type;
       const btnAll = document.getElementById('fc-filter-star-all');
@@ -772,24 +765,17 @@
         btnAll.className = "px-3 py-1 rounded-md text-[11px] font-bold transition-all text-slate-500 hover:text-slate-800";
         btnStarred.className = "px-3 py-1 rounded-md text-[11px] font-bold transition-all bg-white text-slate-800 shadow-sm";
       }
-      
       state.flashcardIndex = 0; 
       initFlashcards();
     }
 
-    function resetFlashcardIndex() {
-      state.flashcardIndex = 0;
-    }
+    function resetFlashcardIndex() { state.flashcardIndex = 0; }
 
     function getFilteredFlashcardsPool() {
       let pool = state.words;
       const chosenFolder = document.getElementById('flashcard-folder-select').value;
-      if (chosenFolder && chosenFolder !== 'ALL_WORDS') {
-        pool = pool.filter(w => w.folder === chosenFolder);
-      }
-      if (state.flashcardFilter === 'starred') {
-        pool = pool.filter(w => w.is_starred);
-      }
+      if (chosenFolder && chosenFolder !== 'ALL_WORDS') { pool = pool.filter(w => w.folder === chosenFolder); }
+      if (state.flashcardFilter === 'starred') { pool = pool.filter(w => w.is_starred); }
       return pool;
     }
 
@@ -798,105 +784,70 @@
       const cardSection = document.getElementById('flashcard-element').parentElement;
       const emptyState = document.getElementById('flashcard-empty-state');
       
-      if (pool.length === 0) {
-        cardSection.classList.add('hidden');
-        emptyState.classList.remove('hidden');
-        return;
-      }
-      
-      cardSection.classList.remove('hidden');
-      emptyState.classList.add('hidden');
-      
-      if (state.flashcardIndex >= pool.length) {
-        state.flashcardIndex = 0;
-      }
+      if (pool.length === 0) { cardSection.classList.add('hidden'); emptyState.classList.remove('hidden'); return; }
+      cardSection.classList.remove('hidden'); emptyState.classList.add('hidden');
+      if (state.flashcardIndex >= pool.length) { state.flashcardIndex = 0; }
       renderFlashcardContent();
     }
 
     function renderFlashcardContent() {
-      const pool = getFilteredFlashcardsPool();
-      if (pool.length === 0) return;
-
+      const pool = getFilteredFlashcardsPool(); if (pool.length === 0) return;
       const current = pool[state.flashcardIndex];
       document.getElementById('flashcard-element').classList.remove('flipped');
       document.getElementById('fc-word').innerText = current.word;
       document.getElementById('fc-kk').innerText = current.kk || '/ 無音標 /';
       document.getElementById('fc-translation').innerText = current.translation;
-      
-      const progressText = `${state.flashcardIndex + 1} / ${pool.length}`;
-      document.getElementById('fc-index-display').innerText = progressText;
-      document.getElementById('fc-index-display-back').innerText = progressText;
+      document.getElementById('fc-index-display').innerText = `${state.flashcardIndex + 1} / ${pool.length}`;
+      document.getElementById('fc-index-display-back').innerText = `${state.flashcardIndex + 1} / ${pool.length}`;
       
       const starBtn = document.getElementById('fc-star-toggle-btn');
-      if (current.is_starred) {
-        starBtn.className = "p-3 bg-amber-50 text-amber-500 rounded-xl transition-colors shadow-sm";
-      } else {
-        starBtn.className = "p-3 bg-slate-100 text-slate-400 rounded-xl hover:bg-amber-50 transition-colors shadow-sm";
-      }
+      if (current.is_starred) { starBtn.className = "p-3 bg-amber-50 text-amber-500 rounded-xl transition-colors shadow-sm"; } 
+      else { starBtn.className = "p-3 bg-slate-100 text-slate-400 rounded-xl hover:bg-amber-50 transition-colors shadow-sm"; }
     }
 
-    function flipFlashcard() { 
-      document.getElementById('flashcard-element').classList.toggle('flipped'); 
-    }
-    
-    function nextFlashcard() { 
-      const pool = getFilteredFlashcardsPool(); 
-      if (pool.length === 0) return; 
-      state.flashcardIndex = (state.flashcardIndex + 1) % pool.length; 
-      renderFlashcardContent(); 
-    }
-    
-    function prevFlashcard() { 
-      const pool = getFilteredFlashcardsPool(); 
-      if (pool.length === 0) return; 
-      state.flashcardIndex = (state.flashcardIndex - 1 + pool.length) % pool.length; 
-      renderFlashcardContent(); 
-    }
-    
-    function speakCurrentFlashcard(event) { 
-      if (event) event.stopPropagation(); 
-      const pool = getFilteredFlashcardsPool(); 
-      if (pool.length > 0) speakWord(pool[state.flashcardIndex].word); 
-    }
+    function flipFlashcard() { document.getElementById('flashcard-element').classList.toggle('flipped'); }
+    function nextFlashcard() { const pool = getFilteredFlashcardsPool(); if (pool.length === 0) return; state.flashcardIndex = (state.flashcardIndex + 1) % pool.length; renderFlashcardContent(); }
+    function prevFlashcard() { const pool = getFilteredFlashcardsPool(); if (pool.length === 0) return; state.flashcardIndex = (state.flashcardIndex - 1 + pool.length) % pool.length; renderFlashcardContent(); }
+    function speakCurrentFlashcard(event) { if (event) event.stopPropagation(); const pool = getFilteredFlashcardsPool(); if (pool.length > 0) speakWord(pool[state.flashcardIndex].word); }
 
     async function toggleFlashcardStarStatus(event) {
       if (event) event.stopPropagation();
-      const pool = getFilteredFlashcardsPool();
-      if (pool.length === 0) return;
-
+      const pool = getFilteredFlashcardsPool(); if (pool.length === 0) return;
       const current = pool[state.flashcardIndex];
       const targetIndexInAll = state.words.findIndex(w => w.id == current.id);
       
       if (targetIndexInAll !== -1) {
-        const currentStarState = state.words[targetIndexInAll].is_starred;
-        const newStarState = !currentStarState;
-        
+        const newStarState = !state.words[targetIndexInAll].is_starred;
         state.words[targetIndexInAll].is_starred = newStarState;
-        
         await callGasApi("toggleStar", { id: current.id, isStarred: newStarState });
         showToast(newStarState ? "已加入精選星號 ⭐" : "已移除星號", "💡");
-        
-        if (state.flashcardFilter === 'starred' && !newStarState) {
-          initFlashcards();
-        } else {
-          renderFlashcardContent();
-        }
+        if (state.flashcardFilter === 'starred' && !newStarState) { initFlashcards(); } 
+        else { renderFlashcardContent(); }
       }
     }
 
-  
-    
-    function handleGlobalKeydown(e) { if (state.currentTab !== 'flashcard') return; if (e.key === 'ArrowRight') nextFlashcard(); else if (e.key === 'ArrowLeft') prevFlashcard(); else if (e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); flipFlashcard(); } }
+    function handleGlobalKeydown(e) { 
+      if (state.currentTab !== 'flashcard') return; 
+      if (e.key === 'ArrowRight') nextFlashcard(); 
+      else if (e.key === 'ArrowLeft') prevFlashcard(); 
+      else if (e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); flipFlashcard(); } 
+    }
 
     // ==========================================
-    // 7. 網頁 4 智慧英文單字測驗挑戰 (Tab: Quiz)
+    // 智慧英文單字測驗挑戰 (修復版出題核心)
     // ==========================================
-    
-    function setQuizMode(mode) { state.quiz.mode = mode; document.getElementById('qz-mode-choice').className = mode==='choice'?'border-2 border-brand-500 bg-brand-50/20 text-brand-700 p-3 rounded-xl flex flex-col items-center':'border-2 border-slate-200 text-slate-500 p-3 rounded-xl flex flex-col items-center'; document.getElementById('qz-mode-spelling').className = mode==='spelling'?'border-2 border-brand-500 bg-brand-50/20 text-brand-700 p-3 rounded-xl flex flex-col items-center':'border-2 border-slate-200 text-slate-500 p-3 rounded-xl flex flex-col items-center'; }
-    function setQuizScope(scope) { state.quiz.scope = scope; document.getElementById('qz-scope-all').className = scope==='all'?'border border-brand-500 bg-brand-50/20 text-brand-700 py-2.5 rounded-xl text-xs font-bold':'border border-slate-200 text-slate-500 py-2.5 rounded-xl text-xs font-bold'; document.getElementById('qz-scope-starred').className = scope==='starred'?'border border-brand-500 bg-brand-50/20 text-brand-700 py-2.5 rounded-xl text-xs font-bold':'border border-slate-200 text-slate-500 py-2.5 rounded-xl text-xs font-bold'; }
+    function setQuizMode(mode) { 
+      state.quiz.mode = mode; 
+      document.getElementById('qz-mode-choice').className = mode==='choice'?'border-2 border-brand-500 bg-brand-50/20 text-brand-700 p-3 rounded-xl flex flex-col items-center text-center':'border-2 border-slate-200 text-slate-500 p-3 rounded-xl flex flex-col items-center text-center'; 
+      document.getElementById('qz-mode-spelling').className = mode==='spelling'?'border-2 border-brand-500 bg-brand-50/20 text-brand-700 p-3 rounded-xl flex flex-col items-center text-center':'border-2 border-slate-200 text-slate-500 p-3 rounded-xl flex flex-col items-center text-center'; 
+    }
+    function setQuizScope(scope) { 
+      state.quiz.scope = scope; 
+      document.getElementById('qz-scope-all').className = scope==='all'?'border border-brand-500 bg-brand-50/20 text-brand-700 py-2.5 rounded-xl text-xs font-bold':'border border-slate-200 text-slate-500 py-2.5 rounded-xl text-xs font-bold'; 
+      document.getElementById('qz-scope-starred').className = scope==='starred'?'border border-brand-500 bg-brand-50/20 text-brand-700 py-2.5 rounded-xl text-xs font-bold':'border border-slate-200 text-slate-500 py-2.5 rounded-xl text-xs font-bold'; 
+    }
 
     function startQuiz() {
-      // 修正點：開始測驗時，即時抓取目前下拉選單真正選中的資料夾名稱
       const chosenQuizFolder = document.getElementById('quiz-folder-select').value;
       let pool = state.words;
       
@@ -907,12 +858,11 @@
         pool = pool.filter(w => w.is_starred);
       }
 
-      // 防呆提示：如果單字量不夠四選一模式，跳出警告而不是卡死
       if (pool.length < (state.quiz.mode === 'choice' ? 4 : 1)) {
         if (state.quiz.mode === 'choice') {
-          showToast(`該分類範圍內的單字量不足 4 個（目前僅 ${pool.length} 個），無法進行四選一測驗！`, "⚠️");
+          showToast(`該範圍內的單字量不足 4 個（目前僅 ${pool.length} 個），無法進行四選一測驗！`, "⚠️");
         } else {
-          showToast("該分類範圍內沒有任何單字可以測驗！", "⚠️");
+          showToast("該範圍內沒有任何單字可以測驗！", "⚠️");
         }
         return;
       }
@@ -921,7 +871,7 @@
       const shuffled = [...pool].sort(() => 0.5 - Math.random());
       state.quiz.questions = shuffled.slice(0, Math.min(10, shuffled.length));
       state.quiz.currentIndex = 0; 
-      state.quiz.score = 0; 
+      state.quiz.score = 0;
       state.quiz.isAnswered = false;
       
       document.getElementById('quiz-setup').classList.add('hidden'); 
