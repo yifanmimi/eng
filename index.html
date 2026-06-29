@@ -261,6 +261,17 @@
               <label class="block text-xs font-bold text-slate-400 uppercase mb-2">出題資料夾範圍</label>
               <select id="quiz-folder-select" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"></select>
             </div>
+            <!-- 新增：設定考試題數選單 -->
+            <div>
+              <label class="block text-xs font-bold text-slate-400 uppercase mb-2">設定考試題數</label>
+              <select id="quiz-count-select" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                <option value="5">5 題 (快速複習)</option>
+                <option value="10" selected>10 題 (標準挑戰)</option>
+                <option value="20">20 題 (深度測驗)</option>
+                <option value="30">30 題 (強化記憶)</option>
+                <option value="50">50 題 (終極鐵人)</option>
+              </select>
+            </div>
             <div>
               <label class="block text-xs font-bold text-slate-400 uppercase mb-2">篩選星號狀態</label>
               <div class="grid grid-cols-2 gap-3">
@@ -858,6 +869,10 @@
         pool = pool.filter(w => w.is_starred);
       }
 
+      // 修正點：即時讀取使用者設定的期望考試題數
+      const targetQuizCount = parseInt(document.getElementById('quiz-count-select').value, 10) || 10;
+
+      // 防呆提示：如果單字量不夠四選一模式（至少要 4 個單字才能做中文四選一）
       if (pool.length < (state.quiz.mode === 'choice' ? 4 : 1)) {
         if (state.quiz.mode === 'choice') {
           showToast(`該範圍內的單字量不足 4 個（目前僅 ${pool.length} 個），無法進行四選一測驗！`, "⚠️");
@@ -868,10 +883,21 @@
       }
 
       document.getElementById('quiz-empty-state').classList.add('hidden');
+      
+      // 洗牌演算法打亂題目
       const shuffled = [...pool].sort(() => 0.5 - Math.random());
-      state.quiz.questions = shuffled.slice(0, Math.min(10, shuffled.length));
+      
+      // 修正點：取「使用者設定題數」與「題目庫現有總數」的最小值，防止題目不夠時出錯
+      const finalQuizCount = Math.min(targetQuizCount, shuffled.length);
+      
+      // 如果發現現有單字量比設定的題數少，彈出提示告知
+      if (shuffled.length < targetQuizCount) {
+        showToast(`目前範圍內只有 ${shuffled.length} 個單字，將為您安排 ${shuffled.length} 題挑戰！`, "💡");
+      }
+
+      state.quiz.questions = shuffled.slice(0, finalQuizCount);
       state.quiz.currentIndex = 0; 
-      state.quiz.score = 0;
+      state.quiz.score = 0; 
       state.quiz.isAnswered = false;
       
       document.getElementById('quiz-setup').classList.add('hidden'); 
