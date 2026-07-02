@@ -555,65 +555,100 @@
     function clearImagePreview(e) { if (e) e.stopPropagation(); state.selectedFile = null; document.getElementById('image-preview').classList.add('hidden'); }
 
     // 修正後：真正解析並顯示真實 AI 辨識成果的影像函式
-function analyzeSelectedImage(e) {
-  if (e) e.stopPropagation(); 
-  if (!state.selectedFile) return;
-  
-  showLoading("正在辨識單字照片", "Gemini 正在擷取英文單字中...");
-  const reader = new FileReader();
-  reader.onload = async function(evt) {
-    try {
-      // 呼叫後端 API
-      const res = await callGasApi("analyzeImage", { 
-        base64Data: evt.target.result.split(',')[1], 
-        contentType: state.selectedFile.type 
-      });
-      
-      hideLoading();
-      
-      // 【關鍵修復】讀取從 GAS 端傳回的真實陣列資料，不再寫死！
-      if (res && res.success && Array.isArray(res.data)) {
-        renderPreviewWords(res.data);
-        clearImagePreview();
-        showToast("辨識成功！請在待上傳區調整並確認存檔", "🎉");
-      } else {
-        showToast("辨識失敗: " + (res.error || "未獲得預期結果"), "❌");
-      }
-    } catch (err) { 
-      hideLoading(); 
-      showToast("連線失敗，請檢查網路或 API 設定", "❌"); 
-    }
-  };
-  reader.readAsDataURL(state.selectedFile);
-}
+// 呼叫 AI 進行圖片辨識
+    function analyzeSelectedImage(e) {
+      if (e) e.stopPropagation();
+      if (!state.selectedFile) return;
 
-// 修正後：手動輸入函式也改為讀取真實 AI 回傳值
-async function analyzeManualText() {
-  const text = document.getElementById('manual-text').value.trim(); 
-  if (!text) return;
-  
-  showLoading("AI 單字分析中", "分析中...");
-  try {
-    const res = await callGasApi("analyzeImage", { 
-      base64Data: btoa(unescape(encodeURIComponent(text))), 
-      contentType: "text/plain" 
-    });
-    
-    hideLoading();
-    
-    // 【關鍵修復】讀取文字分析後回傳的真實片語與單字陣列
-    if (res && res.success && Array.isArray(res.data)) {
-      renderPreviewWords(res.data);
-      document.getElementById('manual-text').value = "";
-      showToast("AI 分析完成！已加入待上傳預覽", "🎉");
-    } else {
-      showToast("分析失敗: " + (res.error || "未解析成功"), "❌");
+      showLoading("正在辨識單字照片", "Gemini 正在擷取英文單字，產出 KK 音標與翻譯...");
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const dataUrl = evt.target.result;
+        const base64Data = dataUrl.split(',')[1];
+        const contentType = state.selectedFile.type;
+
+        if (isGasEnvironment) {
+          google.script.run
+            .withSuccessHandler(function(result) {
+              hideLoading();
+              if (result && !result.error) {
+                renderPreviewWords(result);
+                clearImagePreview();
+                showToast("圖片辨識成功！請校對預覽清單。", "✅");
+              } else {
+                showToast("辨識失敗: " + (result.error || "未知錯誤"), "❌");
+              }
+            })
+            .withFailureHandler(function(err) {
+              hideLoading();
+              showToast("系統連線失敗: " + err.message, "❌");
+            })
+            .analyzeImageFromFrontend(base64Data, contentType);
+        } else {
+          // Demo 預覽模擬延遲
+          setTimeout(() => {
+            hideLoading();
+            const demoResult = [
+              { word: "intelligence", kk: "/ɪnˈtel.ə.dʒəns/", translation: "智能；智慧；情報" },
+              { word: "artificial", kk: "/ˌɑːr.t̬əˈfɪʃ.əl/", translation: "人造的；人工的" },
+              { word: "innovative", kk: "/ˈɪn.ə.veɪ.t̬ɪv/", translation: "創新的；新穎的" }
+            ];
+            renderPreviewWords(demoResult);
+            clearImagePreview();
+            showToast("Demo 模擬圖片辨識成功！", "✅");
+          }, 1500);
+        }
+      };
+      reader.readAsDataURL(state.selectedFile);
     }
-  } catch (err) { 
-    hideLoading(); 
-    showToast("連線失敗，請檢查網路或 API 設定", "❌"); 
-  }
-}
+
+    // 呼叫 AI 進行手動輸入文本分析
+    function analyzeManualText() {
+      const text = document.getElementById('manual-text').value.trim();
+      if (!text) {
+        showToast("請輸入您想學習的英文單字喔！", "⚠️");
+        return;
+      }
+
+      showLoading("AI 單字分析中", "正在為您查詢並分析所輸入單字的 KK 音標與繁中翻譯...");
+
+      if (isGasEnvironment) {
+        // 利用 analyzeImageFromFrontend，只是 base64Data 改為空字串，傳遞純文字內容
+        // GAS analyzeImageFromFrontend 的 prompt 也能直接處理純文字輸入辨識
+        google.script.run
+          .withSuccessHandler(function(result) {
+            hideLoading();
+            if (result && !result.error) {
+              renderPreviewWords(result);
+              document.getElementById('manual-text').value = "";
+              showToast("單字分析完畢！請進行編輯與校對。", "✅");
+            } else {
+              showToast("分析失敗: " + (result.error || "未知錯誤"), "❌");
+            }
+          })
+          .withFailureHandler(function(err) {
+            hideLoading();
+            showToast("連線失敗: " + err.message, "❌");
+          })
+          .analyzeImageFromFrontend(btoa(unescape(encodeURIComponent(text))), "text/plain");
+      } else {
+        setTimeout(() => {
+          hideLoading();
+          const wordsList = text.split(/[\s,，\n]+/).filter(w => w.length > 0);
+          const demoResult = wordsList.map((word, index) => {
+            return {
+              word: word.toLowerCase(),
+              kk: `/${word.length}k.phonetic/`,
+              translation: `[模擬翻譯] ${word} 的中文意思`
+            };
+          });
+          renderPreviewWords(demoResult);
+          document.getElementById('manual-text').value = "";
+          showToast("Demo 模擬分析文字完畢！", "✅");
+        }, 1200);
+      }
+    }
 
     function renderPreviewWords(wordsArray) { state.previewWords = wordsArray; document.getElementById('preview-folder-selector').classList.remove('hidden'); document.getElementById('batch-folder-input').value = ""; updatePreviewUI(); }
 
