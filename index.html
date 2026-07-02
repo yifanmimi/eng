@@ -554,31 +554,66 @@
     }
     function clearImagePreview(e) { if (e) e.stopPropagation(); state.selectedFile = null; document.getElementById('image-preview').classList.add('hidden'); }
 
-    function analyzeSelectedImage(e) {
-      if (e) e.stopPropagation(); if (!state.selectedFile) return;
-      showLoading("正在辨識單字照片", "Gemini 正在擷取英文單字中...");
-      const reader = new FileReader();
-      reader.onload = async function(evt) {
-        try {
-          await callGasApi("analyzeImage", { base64Data: evt.target.result.split(',')[1], contentType: state.selectedFile.type });
-          hideLoading();
-          renderPreviewWords([{ word: "evolving", kk: "/ɪˈvɑːl.vɪŋ/", translation: "發展中的、進化的" }, { word: "analysis", kk: "/əˈnæl.ə.sɪs/", translation: "分析" }]);
-          clearImagePreview();
-        } catch (err) { hideLoading(); showToast("連線失敗", "❌"); }
-      };
-      reader.readAsDataURL(state.selectedFile);
+    // 修正後：真正解析並顯示真實 AI 辨識成果的影像函式
+function analyzeSelectedImage(e) {
+  if (e) e.stopPropagation(); 
+  if (!state.selectedFile) return;
+  
+  showLoading("正在辨識單字照片", "Gemini 正在擷取英文單字中...");
+  const reader = new FileReader();
+  reader.onload = async function(evt) {
+    try {
+      // 呼叫後端 API
+      const res = await callGasApi("analyzeImage", { 
+        base64Data: evt.target.result.split(',')[1], 
+        contentType: state.selectedFile.type 
+      });
+      
+      hideLoading();
+      
+      // 【關鍵修復】讀取從 GAS 端傳回的真實陣列資料，不再寫死！
+      if (res && res.success && Array.isArray(res.data)) {
+        renderPreviewWords(res.data);
+        clearImagePreview();
+        showToast("辨識成功！請在待上傳區調整並確認存檔", "🎉");
+      } else {
+        showToast("辨識失敗: " + (res.error || "未獲得預期結果"), "❌");
+      }
+    } catch (err) { 
+      hideLoading(); 
+      showToast("連線失敗，請檢查網路或 API 設定", "❌"); 
     }
+  };
+  reader.readAsDataURL(state.selectedFile);
+}
 
-    async function analyzeManualText() {
-      const text = document.getElementById('manual-text').value.trim(); if (!text) return;
-      showLoading("AI 單字分析中", "分析中...");
-      try {
-        await callGasApi("analyzeImage", { base64Data: btoa(unescape(encodeURIComponent(text))), contentType: "text/plain" });
-        hideLoading();
-        renderPreviewWords(text.split(/[\s,，\n]+/).filter(w=>w.length>0).map(w=>({ word: w.toLowerCase(), kk: `/${w.length}k/`, translation: `查詢 [ ${w} ] 的意思` })));
-        document.getElementById('manual-text').value = "";
-      } catch (err) { hideLoading(); }
+// 修正後：手動輸入函式也改為讀取真實 AI 回傳值
+async function analyzeManualText() {
+  const text = document.getElementById('manual-text').value.trim(); 
+  if (!text) return;
+  
+  showLoading("AI 單字分析中", "分析中...");
+  try {
+    const res = await callGasApi("analyzeImage", { 
+      base64Data: btoa(unescape(encodeURIComponent(text))), 
+      contentType: "text/plain" 
+    });
+    
+    hideLoading();
+    
+    // 【關鍵修復】讀取文字分析後回傳的真實片語與單字陣列
+    if (res && res.success && Array.isArray(res.data)) {
+      renderPreviewWords(res.data);
+      document.getElementById('manual-text').value = "";
+      showToast("AI 分析完成！已加入待上傳預覽", "🎉");
+    } else {
+      showToast("分析失敗: " + (res.error || "未解析成功"), "❌");
     }
+  } catch (err) { 
+    hideLoading(); 
+    showToast("連線失敗，請檢查網路或 API 設定", "❌"); 
+  }
+}
 
     function renderPreviewWords(wordsArray) { state.previewWords = wordsArray; document.getElementById('preview-folder-selector').classList.remove('hidden'); document.getElementById('batch-folder-input').value = ""; updatePreviewUI(); }
 
