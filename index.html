@@ -67,7 +67,7 @@
 
       <div id="env-badge" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-violet-50 text-violet-600 border border-violet-100 flex items-center space-x-1">
         <span class="h-2 w-2 rounded-full bg-violet-500 animate-pulse"></span>
-        <span id="env-text">尹楨專用</span>
+        <span id="env-text">尊榮專用</span>
       </div>
     </div>
   </header>
@@ -150,7 +150,7 @@
                 <input type="checkbox" id="select-all-checkbox" onchange="toggleSelectAllWords(this.checked)" class="rounded text-brand-600 h-4 w-4">
                 <span>全選目前單字</span>
               </label>
-              <span id="selected-count-text" class="text-indigo-600 font-bold hidden">已選取 0 個單字</span>
+              <span id="selected-count-text" class="text-indigo-600 font-bold hidden">已選 0 項</span>
             </div>
             <div class="flex items-center flex-wrap gap-2">
               <div id="batch-move-box" class="hidden items-center space-x-1.5">
@@ -214,7 +214,7 @@
     </section>
 
     <!-- 3. 測驗挑戰區 -->
-    <section id="tab-content-quiz" class="space-y-6 hidden pb-12">
+    <section id="tab-content-quiz" class="space-y-6 hidden pb-24">
       <div class="max-w-md mx-auto relative">
         <div id="quiz-setup" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-5">
           <div class="text-center"><h3 class="font-bold text-slate-800 text-xl">📝 智慧英文挑戰區</h3></div>
@@ -268,9 +268,6 @@
             <input type="text" id="quiz-spelling-input" onkeydown="handleSpellingEnter(event)" placeholder="請打入完整的英文單字/片語..." class="w-full text-center font-bold text-xl rounded-xl border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500">
             <button onclick="submitSpellingAnswer()" class="w-full bg-indigo-600 text-white font-semibold py-3 rounded-xl text-sm shadow-sm">送出答案</button>
           </div>
-
-          <!-- 回饋框 -->
-          <div id="quiz-feedback" class="hidden p-4 rounded-xl text-center font-bold text-sm flex items-center justify-center space-x-2"></div>
         </div>
 
         <div id="quiz-result" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200 text-center space-y-6">
@@ -287,11 +284,10 @@
         </div>
       </div>
 
-      <!-- 核心修復：底部懸浮下一題按鈕條 (Sticky Bottom Container) -->
-      <div id="sticky-next-bar" class="hidden fixed bottom-[53px] left-0 right-0 md:bottom-4 bg-slate-50/80 backdrop-blur-md border-t border-slate-200/60 p-3 z-40 flex justify-center items-center shadow-lg transition-all duration-300">
-        <button onclick="advanceQuiz()" class="w-full max-w-md bg-slate-900 text-white font-semibold py-3 rounded-xl text-sm flex items-center justify-center space-x-2 active:scale-[0.98] transition-transform">
-          <span>下一題 (Next)</span>
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+      <!-- 核心修復與升級：對錯字卡與下一題「全面合體」的底部固定彩色按鈕條 (Sticky Bottom Interactive Bar) -->
+      <div id="sticky-next-bar" class="hidden fixed bottom-[53px] left-0 right-0 md:bottom-4 bg-white/90 backdrop-blur-md border-t border-slate-200/80 p-3.5 z-40 flex justify-center items-center shadow-[0_-10px_25px_-5px_rgba(0,0,0,0.1)] transition-all duration-300">
+        <button onclick="advanceQuiz()" id="sticky-next-btn" class="w-full max-w-md text-white font-bold py-3.5 rounded-xl text-sm flex items-center justify-center space-x-2 active:scale-[0.97] transition-all shadow-md">
+          <span id="sticky-next-text">下一題 (Next)</span>
         </button>
       </div>
     </section>
@@ -447,7 +443,7 @@
       state.currentTab = tabName;
       ['input', 'list', 'flashcard', 'quiz'].forEach(t => document.getElementById(`tab-content-${t}`).classList.add('hidden'));
       document.getElementById(`tab-content-${tabName}`).classList.remove('hidden');
-      document.getElementById('sticky-next-bar').classList.add('hidden'); // 切頁時強制隱藏懸浮按鈕
+      document.getElementById('sticky-next-bar').classList.add('hidden'); 
 
       document.querySelectorAll('.tab-btn').forEach(btn => btn.className = "tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-all");
       if (document.getElementById(`btn-tab-${tabName}`)) document.getElementById(`btn-tab-${tabName}`).className = "tab-btn px-4 py-2 rounded-lg text-sm font-semibold bg-brand-50 text-brand-600";
@@ -661,21 +657,13 @@
       });
     }
 
-    // 核心新增：40%固定隨機挖空演算法 (不對片語中的空格進行挖空，確保語意完整)
     function generateMissingWordClue(word) {
       let letters = word.split('');
-      // 找出非空格的所有合法的字母索引
       let validIndices = [];
       letters.forEach((char, idx) => { if (char !== ' ' && char !== '-' && char !== '.') validIndices.push(idx); });
-      
-      // 計算固定挖空 40% 的字母數量 (至少挖一個)
       let numToHide = Math.max(1, Math.round(validIndices.length * 0.40));
-      
-      // 隨機抽取索引進行挖空
       let shuffledIndices = validIndices.sort(() => 0.5 - Math.random());
       let hideSet = new Set(shuffledIndices.slice(0, numToHide));
-      
-      // 組裝帶底線的題目字串
       return letters.map((char, idx) => hideSet.has(idx) ? '_' : char).join(' ');
     }
 
@@ -686,7 +674,7 @@
       const targetCount = parseInt(document.getElementById('quiz-count-select').value, 10) || 10;
 
       if (pool.length < (state.quiz.mode === 'choice' ? 4 : 1)) {
-        showToast(state.quiz.mode === 'choice' ? `四選一模式該分類單字庫至少需要 4 個單字（目前僅 ${pool.length} 字）` : "該範圍沒有單字可測驗！", "⚠️");
+        showToast(state.quiz.mode === 'choice' ? `四選一模式該分類單字庫至少需要 4 個單字` : "該範圍沒有單字可測驗！", "⚠️");
         return;
       }
 
@@ -701,8 +689,7 @@
 
     function renderQuizQuestion() {
       state.quiz.isAnswered = false;
-      document.getElementById('quiz-feedback').classList.add('hidden');
-      document.getElementById('sticky-next-bar').classList.add('hidden'); // 隱藏底部固定下一題懸浮條
+      document.getElementById('sticky-next-bar').classList.add('hidden'); 
       
       const currentQ = state.quiz.questions[state.quiz.currentIndex];
       const progressPercent = (state.quiz.currentIndex / state.quiz.questions.length) * 100;
@@ -714,6 +701,7 @@
       const spellingBox = document.getElementById('quiz-spelling-container');
       const missingClueBox = document.getElementById('missing-clue-display');
       
+      choiceBox.innerHTML = "";
       choiceBox.classList.add('hidden'); spellingBox.classList.add('hidden'); missingClueBox.classList.add('hidden');
 
       if (state.quiz.mode === 'choice') {
@@ -724,7 +712,7 @@
         
         const distractors = state.words.filter(w => w.id !== currentQ.id).sort(() => 0.5 - Math.random()).slice(0, 3);
         const options = [currentQ, ...distractors].sort(() => 0.5 - Math.random());
-        choiceBox.innerHTML = "";
+        
         options.forEach(opt => {
           const btn = document.createElement('button');
           btn.className = "w-full text-left p-4 rounded-xl border border-slate-200 hover:bg-indigo-50/40 font-semibold text-slate-700 transition-colors shadow-sm bg-white";
@@ -734,7 +722,6 @@
         });
       } 
       else if (state.quiz.mode === 'missing') {
-        // 模式二：40%固定隨機挖空挑戰
         spellingBox.classList.remove('hidden');
         missingClueBox.classList.remove('hidden');
         
@@ -742,7 +729,6 @@
         document.getElementById('quiz-question-title').innerText = currentQ.translation;
         document.getElementById('quiz-question-hint').innerText = currentQ.kk || '/ 暫無音標 /';
         
-        // 生成帶底線的填空文字提示
         state.quiz.missingClue = generateMissingWordClue(currentQ.word);
         missingClueBox.innerText = state.quiz.missingClue;
         
@@ -751,7 +737,6 @@
         setTimeout(() => inputEl.focus(), 150);
       } 
       else {
-        // 模式三：高難度全拼字挑戰
         spellingBox.classList.remove('hidden');
         document.getElementById('quiz-hint-label').innerText = "請看中文釋義拼寫出完整的英文";
         document.getElementById('quiz-question-title').innerText = currentQ.translation;
@@ -761,53 +746,73 @@
         inputEl.value = ""; inputEl.disabled = false; inputEl.className = "w-full text-center font-bold text-xl rounded-xl border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500";
         setTimeout(() => inputEl.focus(), 150);
       }
+      setTimeout(() => { speakWord(currentQ.word); }, 300);
     }
 
+    // 核心修復與優化：合體對錯回饋與下一題按鈕，並加上自動發音
     function submitChoiceAnswer(selectedOpt, btnElement) {
       if (state.quiz.isAnswered) return; state.quiz.isAnswered = true;
       const currentQ = state.quiz.questions[state.quiz.currentIndex];
-      const feedback = document.getElementById('quiz-feedback');
       const allBtns = document.getElementById('quiz-options-container').querySelectorAll('button');
+      
+      const stickyBar = document.getElementById('sticky-next-bar');
+      const stickyBtn = document.getElementById('sticky-next-btn');
+      const stickyTxt = document.getElementById('sticky-next-text');
+
+      // 核心修正：觸發自動發音
+      speakWord(currentQ.word);
 
       if (selectedOpt.id === currentQ.id) {
         state.quiz.score++;
         btnElement.className = "w-full text-left p-4 rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-800 font-bold shadow-sm";
-        feedback.className = "p-4 rounded-xl text-center font-bold text-sm bg-emerald-50 text-emerald-700 flex items-center justify-center space-x-1";
-        feedback.innerHTML = "<span>🎉 回答正確！太棒了</span>";
+        
+        // 底部懸浮按鈕變為綠色「答對狀態」
+        stickyBtn.className = "w-full max-w-md bg-emerald-600 text-white font-extrabold py-3.5 rounded-xl text-sm flex items-center justify-center space-x-2 active:scale-[0.97] transition-all shadow-md shadow-emerald-100";
+        stickyTxt.innerText = "🎉 回答正確！ 下一題 ➡";
+        
         updateWordAccuracy(currentQ.id, true);
       } else {
         btnElement.className = "w-full text-left p-4 rounded-xl border-2 border-rose-500 bg-rose-50 text-rose-800 font-bold shadow-sm";
-        feedback.className = "p-4 rounded-xl text-center font-bold text-sm bg-rose-50 text-rose-700 flex items-center justify-center space-x-1";
-        feedback.innerHTML = `<span>❌ 答錯囉！正解是：${currentQ.translation}</span>`;
+        
+        // 底部懸浮按鈕變為紅色「答錯狀態」，並精簡呈現正解，完全無需滑動畫面
+        stickyBtn.className = "w-full max-w-md bg-rose-600 text-white font-extrabold py-3.5 rounded-xl text-sm flex items-center justify-center space-x-2 active:scale-[0.97] transition-all shadow-md shadow-rose-100";
+        stickyTxt.innerText = `❌ 正解：${currentQ.translation.split('；')[0].split('，')[0]} / 下一題 ➡`;
+        
         updateWordAccuracy(currentQ.id, false);
         allBtns.forEach(b => { if(b.innerText.includes(currentQ.translation)) b.className = "w-full text-left p-4 rounded-xl border-2 border-emerald-500 text-emerald-700 font-bold bg-white shadow-sm"; });
       }
-      feedback.classList.remove('hidden');
-      document.getElementById('sticky-next-bar').classList.remove('hidden'); // 底部固定下一題懸浮條浮現！
+      stickyBar.classList.remove('hidden'); 
     }
 
     function submitSpellingAnswer() {
       if (state.quiz.isAnswered) return; state.quiz.isAnswered = true;
       const currentQ = state.quiz.questions[state.quiz.currentIndex];
       const inputEl = document.getElementById('quiz-spelling-input');
-      const feedback = document.getElementById('quiz-feedback');
       inputEl.disabled = true;
 
-      // 缺漏字與全拼寫皆採用直接打入完整拼音進行智能判定過關
+      const stickyBar = document.getElementById('sticky-next-bar');
+      const stickyBtn = document.getElementById('sticky-next-btn');
+      const stickyTxt = document.getElementById('sticky-next-text');
+
+      speakWord(currentQ.word);
+
       if (inputEl.value.trim().toLowerCase() === currentQ.word.trim().toLowerCase()) {
         state.quiz.score++;
         inputEl.className = "w-full text-center font-bold text-xl rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-600 px-4 py-3 focus:outline-none";
-        feedback.className = "p-4 rounded-xl text-center font-bold text-sm bg-emerald-50 text-emerald-700 flex items-center justify-center space-x-1";
-        feedback.innerHTML = "<span>🏆 拼寫完全正確！</span>";
+        
+        stickyBtn.className = "w-full max-w-md bg-emerald-600 text-white font-extrabold py-3.5 rounded-xl text-sm flex items-center justify-center space-x-2 active:scale-[0.97] transition-all shadow-md";
+        stickyTxt.innerText = "🏆 拼寫完全正確！ 下一題 ➡";
+        
         updateWordAccuracy(currentQ.id, true);
       } else {
         inputEl.className = "w-full text-center font-bold text-xl rounded-xl border-2 border-rose-500 bg-rose-50 text-rose-600 px-4 py-3 focus:outline-none";
-        feedback.className = "p-4 rounded-xl text-center font-bold text-sm bg-rose-50 text-rose-700 flex items-center justify-center space-x-1";
-        feedback.innerHTML = `<span>❌ 拼錯了！正確是：[ ${currentQ.word} ]</span>`;
+        
+        stickyBtn.className = "w-full max-w-md bg-rose-600 text-white font-extrabold py-3.5 rounded-xl text-sm flex items-center justify-center space-x-2 active:scale-[0.97] transition-all shadow-md";
+        stickyTxt.innerText = `❌ 正確是：[ ${currentQ.word} ] / 下一題 ➡`;
+        
         updateWordAccuracy(currentQ.id, false);
       }
-      feedback.classList.remove('hidden');
-      document.getElementById('sticky-next-bar').classList.remove('hidden'); // 底部固定下一題懸浮條浮現！
+      stickyBar.classList.remove('hidden'); 
     }
 
     function handleSpellingEnter(e) { if (e.key === 'Enter') submitSpellingAnswer(); }
@@ -819,7 +824,7 @@
         renderQuizQuestion();
       } else {
         document.getElementById('quiz-panel').classList.add('hidden');
-        document.getElementById('sticky-next-bar').classList.add('hidden'); // 結束時隱藏懸浮條
+        document.getElementById('sticky-next-bar').classList.add('hidden'); 
         
         const resBox = document.getElementById('quiz-result'); resBox.classList.remove('hidden');
         document.getElementById('res-total').innerText = `${state.quiz.questions.length} 題`;
@@ -829,6 +834,13 @@
     }
     function exitQuiz() { document.getElementById('quiz-panel').classList.add('hidden'); document.getElementById('quiz-result').classList.add('hidden'); document.getElementById('sticky-next-bar').classList.add('hidden'); document.getElementById('quiz-setup').classList.remove('hidden'); }
     function speakWord(t) { if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang='en-US'; u.rate=0.85; window.speechSynthesis.speak(u); } }
+    async function updateWordAccuracy(id, isCorrect) {
+      const idx = state.words.findIndex(w => w.id == id);
+      if (idx !== -1) { 
+        if (isCorrect) state.words[idx].correct_count++; else state.words[idx].wrong_count++; 
+        try { await callGasApi("recordScore", { id: id, correct_count: state.words[idx].correct_count, wrong_count: state.words[idx].wrong_count }); } catch (e) {}
+      }
+    }
   </script>
 </body>
 </html>
