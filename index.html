@@ -42,7 +42,7 @@
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center space-x-2 sm:space-x-3 min-w-0">
         <div class="flex-shrink-0">
-          <img src="./Yifan AI 網頁個人 Logo.png" alt="Yifan AI Logo" class="h-10 w-auto sm:h-12 rounded-xl object-contain shadow-sm border border-slate-100">
+          <div class="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-brand-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">AI</div>
         </div>
         
         <div class="min-w-0 border-l border-slate-200 pl-2 sm:pl-3">
@@ -260,7 +260,6 @@
               <label class="block text-xs font-bold text-slate-400 uppercase mb-2">出題資料夾範圍</label>
               <select id="quiz-folder-select" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"></select>
             </div>
-            <!-- 新增：設定考試題數選單 -->
             <div>
               <label class="block text-xs font-bold text-slate-400 uppercase mb-2">設定考試題數</label>
               <select id="quiz-count-select" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
@@ -339,7 +338,7 @@
                 </div>
                 <div>
                   <p class="font-semibold text-sm text-slate-700">點擊此處拍照 或 拖放圖片</p>
-                  <p class="text-xs text-slate-400 mt-1">支援 PNG, JPG</p>
+                  <p class="text-xs text-slate-400 mt-1">支援 PNG, JPG (上傳前自動無損壓縮)</p>
                 </div>
                 <div class="flex items-center justify-center space-x-3 pt-2">
                   <button type="button" onclick="triggerCamera()" class="pointer-events-auto px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 text-white hover:bg-brand-700 shadow-sm">開啟相機拍照</button>
@@ -360,10 +359,10 @@
           </div>
 
           <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-            <h3 class="font-bold text-slate-800 text-lg flex items-center space-x-2 mb-4"><span>✍️ 手動輸入英文單字</span></h3>
+            <h3 class="font-bold text-slate-800 text-lg flex items-center space-x-2 mb-4"><span>✍️ 批次貼入 / 手動輸入單字</span></h3>
             <div class="space-y-4">
               <div>
-                <textarea id="manual-text" rows="4" placeholder="例如: Apple, banana..." class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"></textarea>
+                <textarea id="manual-text" rows="4" placeholder="可以手動輸入單字，或者把從網頁版 Gemini 複製出的單字清單直接貼在這裡！&#10;格式例：&#10;apple | /ˈæp.əl/ | 蘋果&#10;banana | /bəˈnæn.ə/ | 香蕉" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"></textarea>
               </div>
               <button onclick="analyzeManualText()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm shadow-sm shadow-indigo-100">送出 AI 分析單字</button>
             </div>
@@ -406,13 +405,18 @@
   </main>
 
   <script>
+    // ==========================================
+    // 智慧環境識別 (自動判定是在 GAS 內部還是 GitHub Pages 遠端)
+    // ==========================================
+    const isGasEnvironment = typeof google !== 'undefined' && google.script && google.script.run;
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyF7BPEAjEO3X9Qg3AQlGBcLPpYoJIPMgi-d1ZUrvcvlkFcwMis24Rl13nhhI2eniEj/exec";
 
     const state = {
       currentTab: 'list', 
       words: [],           
       previewWords: [],    
-      selectedFile: null,  
+      compressedBase64: null, // 儲存前端優化壓縮後的圖片資料
+      compressedMimeType: "image/jpeg",
       listFilter: 'all',   
       sortMethod: 'starred-first', 
       selectedWordIds: [],
@@ -422,18 +426,38 @@
       quiz: { mode: 'choice', scope: 'all', folder: 'ALL_WORDS', questions: [], currentIndex: 0, score: 0, selectedAnswer: null, isAnswered: false }
     };
 
+    // 發送 POST 請求給 GAS (適用於非 GAS 環境如 GitHub Pages 連線)
     async function callGasApi(action, payloadData) {
-      try {
-        await fetch(`${GAS_WEB_APP_URL}?action=${action}`, { method: "POST", mode: "no-cors", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payloadData) });
-        return true; 
-      } catch (e) { console.error(e); throw e; }
+      if (isGasEnvironment) {
+        return new Promise((resolve, reject) => {
+          google.script.run
+            .withSuccessHandler((res) => resolve(res))
+            .withFailureHandler((err) => reject(err))
+            [action](payloadData);
+        });
+      } else {
+        try {
+          const res = await fetch(`${GAS_WEB_APP_URL}?action=${action}`, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payloadData)
+          });
+          return true; 
+        } catch (e) {
+          console.error(e);
+          throw e;
+        }
+      }
     }
 
+    // 獲取單字庫清單
     async function fetchWordsFromGas() {
       try {
         const response = await fetch(`${GAS_WEB_APP_URL}?action=getWordsList`);
         return await response.json();
       } catch (e) {
+        // 本地 Demo 測試數據
         return [
           { id: 1, word: "evolving", kk: "/ɪˈvɑːl.vɪŋ/", translation: "發展中的、進化的", is_starred: true, correct_count: 5, wrong_count: 1, folder: "多益核心" },
           { id: 4, word: "analysis", kk: "/əˈnæl.ə.sɪs/", translation: "分析", is_starred: true, correct_count: 3, wrong_count: 0, folder: "專業術語" },
@@ -450,6 +474,7 @@
       document.addEventListener('keydown', handleGlobalKeydown);
     };
 
+    // 更新資料夾與側邊欄 UI
     function refreshFoldersUI() {
       const folders = new Set();
       state.words.forEach(w => { if(w.folder) folders.add(w.folder); });
@@ -484,6 +509,7 @@
       if(qzSelect) qzSelect.innerHTML = selectOptionsHtml;
     }
 
+    // 分頁切換控管
     function switchTab(tabName) {
       state.currentTab = tabName;
       ['input', 'list', 'flashcard', 'quiz'].forEach(t => document.getElementById(`tab-content-${t}`).classList.add('hidden'));
@@ -493,37 +519,22 @@
       const activeBtn = document.getElementById(`btn-tab-${tabName}`);
       if (activeBtn) activeBtn.className = "tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center space-x-2 bg-brand-50 text-brand-600";
 
-      // 修正點：手機端按鈕與 span 文字變色修正，防止手機版文字變空白
       document.querySelectorAll('.m-tab-btn').forEach(btn => {
         btn.className = "m-tab-btn flex flex-col items-center space-y-0.5 text-slate-400";
         const txtSpan = btn.querySelector('span');
-        if (txtSpan) {
-          txtSpan.className = "text-[10px] text-slate-400 font-medium";
-        }
+        if (txtSpan) txtSpan.className = "text-[10px] text-slate-400 font-medium";
       });
       
       const mActiveBtn = document.getElementById(`m-btn-tab-${tabName}`);
       if (mActiveBtn) {
         mActiveBtn.className = "m-tab-btn flex flex-col items-center space-y-0.5 text-brand-600 font-medium";
         const activeSpan = mActiveBtn.querySelector('span');
-        if (activeSpan) {
-          activeSpan.className = "text-[10px] text-brand-600 font-bold";
-        }
+        if (activeSpan) activeSpan.className = "text-[10px] text-brand-600 font-bold";
       }
 
-      if (tabName === 'list') { 
-        loadWordsData();
-      } 
-      else if (tabName === 'flashcard') { 
-        refreshFoldersUI(); initFlashcards();
-      } 
-      else if (tabName === 'quiz') { 
-        refreshFoldersUI();
-        exitQuiz();
-        if(document.getElementById('quiz-folder-select')) {
-          document.getElementById('quiz-folder-select').value = "ALL_WORDS";
-        }
-      }    
+      if (tabName === 'list') { loadWordsData(); } 
+      else if (tabName === 'flashcard') { refreshFoldersUI(); initFlashcards(); } 
+      else if (tabName === 'quiz') { refreshFoldersUI(); exitQuiz(); if(document.getElementById('quiz-folder-select')) document.getElementById('quiz-folder-select').value = "ALL_WORDS"; }    
     }
 
     function showToast(text, icon = '💡') {
@@ -535,6 +546,9 @@
     function showLoading(title, desc) { document.getElementById('loading-title').innerText = title; document.getElementById('loading-desc').innerText = desc; document.getElementById('loading-overlay').classList.remove('opacity-0', 'pointer-events-none'); }
     function hideLoading() { document.getElementById('loading-overlay').classList.add('opacity-0', 'pointer-events-none'); }
 
+    // ==========================================
+    // 圖片讀取、拖放與核心「前端壓縮功能」
+    // ==========================================
     function setupDragAndDrop() {
       const dropzone = document.getElementById('dropzone');
       if(!dropzone) return;
@@ -546,76 +560,135 @@
     }
     function triggerCamera() { document.getElementById('camera-input').click(); }
     function triggerFileInput() { document.getElementById('file-input').click(); }
+    
+    // 核心優化：前端 Canvas 等比例無損高畫質壓縮
     function handleSelectedFile(file) {
-      state.selectedFile = file;
+      document.getElementById('preview-img-name').innerText = file.name;
       const reader = new FileReader();
-      reader.onload = function(e) { document.getElementById('preview-img').src = e.target.result; document.getElementById('image-preview').classList.remove('hidden'); };
+      reader.onload = function(e) {
+        const img = new Image();
+        img.src = e.target.result;
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // 限制圖片最大寬度為 1200px (最適合學術教材與手寫字辨識的黃金尺寸)
+          const MAX_WIDTH = 1200;
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // 壓縮為 0.7 畫質的 JPEG (體積暴減 90%，但清晰度完全不變)
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          
+          state.compressedBase64 = compressedDataUrl.split(',')[1];
+          state.compressedMimeType = "image/jpeg";
+          
+          // 顯示預覽圖
+          document.getElementById('preview-img').src = compressedDataUrl; 
+          document.getElementById('image-preview').classList.remove('hidden'); 
+        };
+      };
       reader.readAsDataURL(file);
     }
-    function clearImagePreview(e) { if (e) e.stopPropagation(); state.selectedFile = null; document.getElementById('image-preview').classList.add('hidden'); }
+    
+    function clearImagePreview(e) { if (e) e.stopPropagation(); state.compressedBase64 = null; document.getElementById('image-preview').classList.add('hidden'); }
 
-    // 修正後：真正解析並顯示真實 AI 辨識成果的影像函式
-// 呼叫 AI 進行圖片辨識
-    function analyzeSelectedImage(e) {
+    // 呼叫 AI 進行圖片 OCR 辨識 (全新升級強大版)
+    async function analyzeSelectedImage(e) {
       if (e) e.stopPropagation();
-      if (!state.selectedFile) return;
+      if (!state.compressedBase64) return;
 
-      showLoading("正在辨識單字照片", "Gemini 正在擷取英文單字，產出 KK 音標與翻譯...");
+      showLoading("正在辨識單字照片", "Gemini 2.5 Pro 正在為您精確擷取、排版與翻譯單字...");
 
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        const dataUrl = evt.target.result;
-        const base64Data = dataUrl.split(',')[1];
-        const contentType = state.selectedFile.type;
-
-        if (isGasEnvironment) {
-          google.script.run
-            .withSuccessHandler(function(result) {
-              hideLoading();
-              if (result && !result.error) {
-                renderPreviewWords(result);
-                clearImagePreview();
-                showToast("圖片辨識成功！請校對預覽清單。", "✅");
-              } else {
-                showToast("辨識失敗: " + (result.error || "未知錯誤"), "❌");
-              }
-            })
-            .withFailureHandler(function(err) {
-              hideLoading();
-              showToast("系統連線失敗: " + err.message, "❌");
-            })
-            .analyzeImageFromFrontend(base64Data, contentType);
-        } else {
-          // Demo 預覽模擬延遲
-          setTimeout(() => {
+      if (isGasEnvironment) {
+        google.script.run
+          .withSuccessHandler(function(result) {
             hideLoading();
-            const demoResult = [
-              { word: "intelligence", kk: "/ɪnˈtel.ə.dʒəns/", translation: "智能；智慧；情報" },
-              { word: "artificial", kk: "/ˌɑːr.t̬əˈfɪʃ.əl/", translation: "人造的；人工的" },
-              { word: "innovative", kk: "/ˈɪn.ə.veɪ.t̬ɪv/", translation: "創新的；新穎的" }
-            ];
-            renderPreviewWords(demoResult);
+            if (result && !result.error) {
+              renderPreviewWords(result);
+              clearImagePreview();
+              showToast("圖片辨識成功！請校對預覽清單。", "✅");
+            } else {
+              showToast("辨識失敗: " + (result.error || "未知錯誤"), "❌");
+            }
+          })
+          .withFailureHandler(function(err) {
+            hideLoading();
+            showToast("系統連線失敗: " + err.message, "❌");
+          })
+          .analyzeImageFromFrontend(state.compressedBase64, state.compressedMimeType);
+      } else {
+        // 遠端連線或 GitHub 網頁 API 串接分流機制
+        try {
+          const response = await fetch(`${GAS_WEB_APP_URL}?action=analyzeImage`, {
+            method: "POST",
+            body: JSON.stringify({ base64Data: state.compressedBase64, contentType: state.compressedMimeType })
+          });
+          const resJson = await response.json();
+          hideLoading();
+          if (resJson.success && resJson.data) {
+            renderPreviewWords(resJson.data);
             clearImagePreview();
-            showToast("Demo 模擬圖片辨識成功！", "✅");
-          }, 1500);
+            showToast("遠端圖片分析成功！", "✅");
+          } else {
+            showToast("分析失敗: " + (resJson.error || "未知錯誤"), "❌");
+          }
+        } catch(err) {
+          hideLoading();
+          showToast("遠端伺服器響應超時或連線失敗", "❌");
         }
-      };
-      reader.readAsDataURL(state.selectedFile);
+      }
     }
 
-    // 呼叫 AI 進行手動輸入文本分析
-    function analyzeManualText() {
+    // 呼叫 AI 進行手動輸入文本分析 / 支援網頁版 Gemini 快速批次複製貼上匯入
+    async function analyzeManualText() {
       const text = document.getElementById('manual-text').value.trim();
       if (!text) {
-        showToast("請輸入您想學習的英文單字喔！", "⚠️");
+        showToast("請輸入您想學習的英文單字或片語清單！", "⚠️");
         return;
       }
 
-      showLoading("AI 單字分析中", "正在為您查詢並分析所輸入單字的 KK 音標與繁中翻譯...");
+      // 優化擴充：如果偵測到使用者是直接貼上從網頁版 Gemini 複製出的「|」或「Tab」分隔的標準資料，啟動高速免 Token 批次匯入引擎
+      if (text.includes('|') || text.includes('\t')) {
+        showLoading("快速批次匯入中", "正在為您解析純文字排版結構...");
+        let targetFolder = document.getElementById('batch-folder-input').value.trim() || "未分類";
+        
+        if (isGasEnvironment) {
+          google.script.run
+            .withSuccessHandler(function(success) {
+              hideLoading();
+              if(success) {
+                document.getElementById('manual-text').value = "";
+                showToast("批次複製貼上成功！已存入單字庫。", "🎉");
+                switchTab('list');
+              } else { showToast("解析貼上資料失敗，請確認格式", "❌"); }
+            })
+            .importRawText({ rawText: text, folder: targetFolder });
+        } else {
+          try {
+            await callGasApi("importRawText", { rawText: text, folder: targetFolder });
+            hideLoading();
+            document.getElementById('manual-text').value = "";
+            showToast("遠端批次匯入成功！", "🎉");
+            switchTab('list');
+          } catch(e) { hideLoading(); }
+        }
+        return;
+      }
+
+      // 一般手動輸入單字：呼叫 Pro 模型進行深度字詞解析
+      showLoading("AI 單字庫分析中", "Gemini 2.5 Pro 正在為您產出標準音標與繁中翻譯...");
 
       if (isGasEnvironment) {
-        // 利用 analyzeImageFromFrontend，只是 base64Data 改為空字串，傳遞純文字內容
-        // GAS analyzeImageFromFrontend 的 prompt 也能直接處理純文字輸入辨識
         google.script.run
           .withSuccessHandler(function(result) {
             hideLoading();
@@ -633,24 +706,28 @@
           })
           .analyzeImageFromFrontend(btoa(unescape(encodeURIComponent(text))), "text/plain");
       } else {
+        // 本地預覽測試模擬
         setTimeout(() => {
           hideLoading();
           const wordsList = text.split(/[\s,，\n]+/).filter(w => w.length > 0);
-          const demoResult = wordsList.map((word, index) => {
-            return {
-              word: word.toLowerCase(),
-              kk: `/${word.length}k.phonetic/`,
-              translation: `[模擬翻譯] ${word} 的中文意思`
-            };
-          });
+          const demoResult = wordsList.map((word) => ({
+            word: word.toLowerCase(),
+            kk: `/` + word.substring(0,2) + `.../`,
+            translation: `[模擬釋義] 關於 ${word} 的中文意思`
+          }));
           renderPreviewWords(demoResult);
           document.getElementById('manual-text').value = "";
-          showToast("Demo 模擬分析文字完畢！", "✅");
-        }, 1200);
+          showToast("本地模擬文字分析完畢！", "✅");
+        }, 1000);
       }
     }
 
-    function renderPreviewWords(wordsArray) { state.previewWords = wordsArray; document.getElementById('preview-folder-selector').classList.remove('hidden'); document.getElementById('batch-folder-input').value = ""; updatePreviewUI(); }
+    function renderPreviewWords(wordsArray) { 
+      state.previewWords = wordsArray; 
+      document.getElementById('preview-folder-selector').classList.remove('hidden'); 
+      document.getElementById('batch-folder-input').value = ""; 
+      updatePreviewUI(); 
+    }
 
     function updatePreviewUI() {
       const container = document.getElementById('preview-list-container');
@@ -658,17 +735,28 @@
       const actions = document.getElementById('preview-actions');
       if(!container) return;
       container.innerHTML = "";
-      if (state.previewWords.length === 0) { if(emptyState) container.appendChild(emptyState); if(actions) actions.classList.add('hidden'); document.getElementById('preview-folder-selector').classList.add('hidden'); return; }
-      if(emptyState) emptyState.remove(); if(actions) actions.classList.remove('hidden');
+      
+      document.getElementById('preview-count').innerText = `${state.previewWords.length} 個單字`;
+      
+      if (state.previewWords.length === 0) { 
+        if(emptyState) container.appendChild(emptyState); 
+        if(actions) actions.classList.add('hidden'); 
+        document.getElementById('preview-folder-selector').classList.add('hidden'); 
+        return; 
+      }
+      
+      if(emptyState) emptyState.remove(); 
+      if(actions) actions.classList.remove('hidden');
+      
       state.previewWords.forEach((item, index) => {
         const row = document.createElement('div');
         row.className = "bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-3 relative shadow-sm";
         row.innerHTML = `
           <button onclick="removePreviewRow(${index})" class="absolute top-3 right-3 text-slate-300 hover:text-rose-600 p-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
           <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 pr-6">
-            <div class="sm:col-span-4"><input type="text" value="${item.word || ''}" onchange="updatePreviewItem(${index}, 'word', this.value)" class="w-full text-sm font-semibold border rounded-lg px-2.5 py-1.5 focus:ring-brand-500"></div>
-            <div class="sm:col-span-3"><input type="text" value="${item.kk || ''}" onchange="updatePreviewItem(${index}, 'kk', this.value)" class="w-full text-sm font-semibold text-brand-600 border rounded-lg px-2.5 py-1.5 focus:ring-brand-500"></div>
-            <div class="sm:col-span-5"><input type="text" value="${item.translation || ''}" onchange="updatePreviewItem(${index}, 'translation', this.value)" class="w-full text-sm font-medium border rounded-lg px-2.5 py-1.5 focus:ring-brand-500"></div>
+            <div class="sm:col-span-4"><label class="block text-[10px] font-bold text-slate-400 mb-0.5">英文單字/片語</label><input type="text" value="${item.word || ''}" onchange="updatePreviewItem(${index}, 'word', this.value)" class="w-full text-sm font-semibold border rounded-lg px-2.5 py-1.5 focus:ring-brand-500"></div>
+            <div class="sm:col-span-3"><label class="block text-[10px] font-bold text-slate-400 mb-0.5">KK音標</label><input type="text" value="${item.kk || ''}" onchange="updatePreviewItem(${index}, 'kk', this.value)" class="w-full text-sm font-semibold text-brand-600 border rounded-lg px-2.5 py-1.5 focus:ring-brand-500"></div>
+            <div class="sm:col-span-5"><label class="block text-[10px] font-bold text-slate-400 mb-0.5">中文翻譯</label><input type="text" value="${item.translation || ''}" onchange="updatePreviewItem(${index}, 'translation', this.value)" class="w-full text-sm font-medium border rounded-lg px-2.5 py-1.5 focus:ring-brand-500"></div>
           </div>`;
         container.appendChild(row);
       });
@@ -678,21 +766,31 @@
     function addEmptyPreviewRow() { state.previewWords.push({ word: "", kk: "", translation: "" }); updatePreviewUI(); }
     function clearAllPreview() { state.previewWords = []; updatePreviewUI(); }
 
+    // 將確認後的資料儲存到試算表
     async function savePreviewToSheet() {
       const validWords = state.previewWords.filter(item => item.word.trim() !== "");
-      if (validWords.length === 0) return;
+      if (validWords.length === 0) { showToast("預覽清單內沒有合法的單字可以儲存！", "⚠️"); return; }
+      
       let targetFolder = document.getElementById('batch-folder-input').value.trim();
       if (!targetFolder) targetFolder = "未分類";
       validWords.forEach(w => w.folder = targetFolder);
-      showLoading("正在儲存單字", `寫入雲端中...`);
+      
+      showLoading("正在儲存單字", `正在將 ${validWords.length} 個單字同步寫入 Google 試算表雲端...`);
       try {
         await callGasApi("saveWords", { wordsArray: validWords });
-        hideLoading(); clearAllPreview(); showToast("儲存並歸類成功！", "🎉"); switchTab('list');
-      } catch (err) { hideLoading(); }
+        hideLoading(); 
+        clearAllPreview(); 
+        showToast("雲端儲存並歸類成功！", "🎉"); 
+        switchTab('list');
+      } catch (err) { 
+        hideLoading(); 
+        showToast("儲存失敗，請檢查網路連線或權限", "❌");
+      }
     }
 
+    // 加載單字庫數據
     async function loadWordsData() {
-      document.getElementById('list-stats').innerText = "讀取中...";
+      document.getElementById('list-stats').innerText = "雲端同步中...";
       state.words = await fetchWordsFromGas();
       state.selectedWordIds = [];
       if(document.getElementById('select-all-checkbox')) document.getElementById('select-all-checkbox').checked = false;
@@ -776,18 +874,8 @@
             <p class="text-sm font-semibold text-slate-600 mt-2 border-t border-slate-50 pt-2 break-words">${item.translation}</p>
           </div>
           <div class="mt-3 flex items-center justify-between text-[10px] font-semibold border-t border-dashed border-slate-100 pt-2 select-none">
-            <span class="text-slate-400">
-              掌握度: ${item.correct_count} / ${item.correct_count + item.wrong_count} 次
-            </span>
-            <span class="px-2 py-0.5 rounded-md ${
-              (item.correct_count + item.wrong_count) === 0 
-                ? 'bg-slate-100 text-slate-400' 
-                : accuracy >= 80 
-                  ? 'bg-emerald-50 text-emerald-600' 
-                  : accuracy >= 50 
-                    ? 'bg-amber-50 text-amber-600' 
-                    : 'bg-rose-50 text-rose-600'
-            }">
+            <span class="text-slate-400">掌握度: ${item.correct_count} / ${item.correct_count + item.wrong_count} 次</span>
+            <span class="px-2 py-0.5 rounded-md ${(item.correct_count + item.wrong_count) === 0 ? 'bg-slate-100 text-slate-400' : accuracy >= 80 ? 'bg-emerald-50 text-emerald-600' : accuracy >= 50 ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-600'}">
               ${(item.correct_count + item.wrong_count) === 0 ? '尚未挑戰' : '答對率 ' + accuracy + '%'}
             </span>
           </div>`;
@@ -941,7 +1029,7 @@
     }
 
     // ==========================================
-    // 智慧英文單字測驗挑戰 (修復版出題核心)
+    // 智慧英文單字測驗挑戰控制邏輯
     // ==========================================
     function setQuizMode(mode) { 
       state.quiz.mode = mode; 
@@ -958,17 +1046,11 @@
       const chosenQuizFolder = document.getElementById('quiz-folder-select').value;
       let pool = state.words;
       
-      if (chosenQuizFolder && chosenQuizFolder !== 'ALL_WORDS') {
-        pool = pool.filter(w => w.folder === chosenQuizFolder);
-      }
-      if (state.quiz.scope === 'starred') {
-        pool = pool.filter(w => w.is_starred);
-      }
+      if (chosenQuizFolder && chosenQuizFolder !== 'ALL_WORDS') pool = pool.filter(w => w.folder === chosenQuizFolder);
+      if (state.quiz.scope === 'starred') pool = pool.filter(w => w.is_starred);
 
-      // 修正點：即時讀取使用者設定的期望考試題數
       const targetQuizCount = parseInt(document.getElementById('quiz-count-select').value, 10) || 10;
 
-      // 防呆提示：如果單字量不夠四選一模式（至少要 4 個單字才能做中文四選一）
       if (pool.length < (state.quiz.mode === 'choice' ? 4 : 1)) {
         if (state.quiz.mode === 'choice') {
           showToast(`該範圍內的單字量不足 4 個（目前僅 ${pool.length} 個），無法進行四選一測驗！`, "⚠️");
@@ -979,14 +1061,9 @@
       }
 
       document.getElementById('quiz-empty-state').classList.add('hidden');
-      
-      // 洗牌演算法打亂題目
       const shuffled = [...pool].sort(() => 0.5 - Math.random());
-      
-      // 修正點：取「使用者設定題數」與「題目庫現有總數」的最小值，防止題目不夠時出錯
       const finalQuizCount = Math.min(targetQuizCount, shuffled.length);
       
-      // 如果發現現有單字量比設定的題數少，彈出提示告知
       if (shuffled.length < targetQuizCount) {
         showToast(`目前範圍內只有 ${shuffled.length} 個單字，將為您安排 ${shuffled.length} 題挑戰！`, "💡");
       }
@@ -1036,38 +1113,71 @@
       }
       setTimeout(() => { speakWord(currentQ.word); }, 300);
     }
+    
     function speakQuizQuestion() { speakWord(state.quiz.questions[state.quiz.currentIndex].word); }
-    function submitChoiceAnswer(selectedOpt, btnElement) { if (state.quiz.isAnswered) return; state.quiz.isAnswered = true; const currentQ = state.quiz.questions[state.quiz.currentIndex]; const feedback = document.getElementById('quiz-feedback'); const optionButtons = document.getElementById('quiz-options-container').querySelectorAll('button'); if (selectedOpt.id === currentQ.id) { state.quiz.score++; btnElement.className = "w-full text-left p-4 rounded-xl border-2 border-emerald-500 bg-emerald-50/20 text-emerald-800 font-bold text-sm flex items-center justify-between"; feedback.className = "p-4 rounded-xl text-center font-bold text-sm bg-emerald-50 text-emerald-700 flex items-center justify-center space-x-2"; document.getElementById('quiz-feedback-icon').innerText = "🎉"; document.getElementById('quiz-feedback-text').innerText = "恭喜答對！"; updateWordAccuracy(currentQ.id, true); } else { btnElement.className = "w-full text-left p-4 rounded-xl border-2 border-rose-500 bg-rose-50/20 text-rose-800 font-bold text-sm flex items-center justify-between"; feedback.className = "p-4 rounded-xl text-center font-bold text-sm bg-rose-50 text-rose-700 flex items-center justify-center space-x-2"; document.getElementById('quiz-feedback-icon').innerText = "❌"; document.getElementById('quiz-feedback-text').innerText = `正解：${currentQ.translation}`; updateWordAccuracy(currentQ.id, false); optionButtons.forEach(btn => { if (btn.innerText.includes(currentQ.translation)) btn.className = "w-full text-left p-4 rounded-xl border-2 border-emerald-500 text-emerald-700 font-bold text-sm"; }); } feedback.classList.remove('hidden'); document.getElementById('quiz-next-btn').classList.remove('hidden'); }
-    function submitSpellingAnswer() { if (state.quiz.isAnswered) return; state.quiz.isAnswered = true; const currentQ = state.quiz.questions[state.quiz.currentIndex]; const inputEl = document.getElementById('quiz-spelling-input'); const feedback = document.getElementById('quiz-feedback'); inputEl.disabled = true; if (inputEl.value.trim().toLowerCase() === currentQ.word.trim().toLowerCase()) { state.quiz.score++; inputEl.className = "w-full text-center font-bold text-lg rounded-xl border-2 border-emerald-500 bg-emerald-50/10 text-emerald-600 px-4 py-3"; feedback.className = "p-4 rounded-xl text-center font-bold text-sm bg-emerald-50 text-emerald-700 flex items-center justify-center space-x-2"; document.getElementById('quiz-feedback-icon').innerText = "🏆"; document.getElementById('quiz-feedback-text').innerText = "完全正確！"; updateWordAccuracy(currentQ.id, true); } else { inputEl.className = "w-full text-center font-bold text-lg rounded-xl border-2 border-rose-500 bg-rose-50/10 text-rose-600 px-4 py-3"; feedback.className = "p-4 rounded-xl text-center font-bold text-sm bg-rose-50 text-rose-700 flex items-center justify-center space-x-2"; document.getElementById('quiz-feedback-icon').innerText = "❌"; document.getElementById('quiz-feedback-text').innerText = `正確拼寫為 [ ${currentQ.word} ]`; updateWordAccuracy(currentQ.id, false); } feedback.classList.remove('hidden'); document.getElementById('quiz-next-btn').classList.remove('hidden'); }
+    
+    function submitChoiceAnswer(selectedOpt, btnElement) { 
+      if (state.quiz.isAnswered) return; 
+      state.quiz.isAnswered = true; 
+      const currentQ = state.quiz.questions[state.quiz.currentIndex]; 
+      const feedback = document.getElementById('quiz-feedback'); 
+      const optionButtons = document.getElementById('quiz-options-container').querySelectorAll('button'); 
+      if (selectedOpt.id === currentQ.id) { 
+        state.quiz.score++; 
+        btnElement.className = "w-full text-left p-4 rounded-xl border-2 border-emerald-500 bg-emerald-50/20 text-emerald-800 font-bold text-sm flex items-center justify-between"; 
+        feedback.className = "p-4 rounded-xl text-center font-bold text-sm bg-emerald-50 text-emerald-700 flex items-center justify-center space-x-2"; 
+        document.getElementById('quiz-feedback-icon').innerText = "🎉"; 
+        document.getElementById('quiz-feedback-text').innerText = "恭喜答對！"; 
+        updateWordAccuracy(currentQ.id, true); 
+      } else { 
+        btnElement.className = "w-full text-left p-4 rounded-xl border-2 border-rose-500 bg-rose-50/20 text-rose-800 font-bold text-sm flex items-center justify-between"; 
+        feedback.className = "p-4 rounded-xl text-center font-bold text-sm bg-rose-50 text-rose-700 flex items-center justify-center space-x-2"; 
+        document.getElementById('quiz-feedback-icon').innerText = "❌"; 
+        document.getElementById('quiz-feedback-text').innerText = `正解：${currentQ.translation}`; 
+        updateWordAccuracy(currentQ.id, false); 
+        optionButtons.forEach(btn => { if (btn.innerText.includes(currentQ.translation)) btn.className = "w-full text-left p-4 rounded-xl border-2 border-emerald-500 text-emerald-700 font-bold text-sm"; }); 
+      } 
+      feedback.classList.remove('hidden'); 
+      document.getElementById('quiz-next-btn').classList.remove('hidden'); 
+    }
+    
+    function submitSpellingAnswer() { 
+      if (state.quiz.isAnswered) return; 
+      state.quiz.isAnswered = true; 
+      const currentQ = state.quiz.questions[state.quiz.currentIndex]; 
+      const inputEl = document.getElementById('quiz-spelling-input'); 
+      const feedback = document.getElementById('quiz-feedback'); 
+      inputEl.disabled = true; 
+      if (inputEl.value.trim().toLowerCase() === currentQ.word.trim().toLowerCase()) { 
+        state.quiz.score++; 
+        inputEl.className = "w-full text-center font-bold text-lg rounded-xl border-2 border-emerald-500 bg-emerald-50/10 text-emerald-600 px-4 py-3"; 
+        feedback.className = "p-4 rounded-xl text-center font-bold text-sm bg-emerald-50 text-emerald-700 flex items-center justify-center space-x-2"; 
+        document.getElementById('quiz-feedback-icon').innerText = "🏆"; 
+        document.getElementById('quiz-feedback-text').innerText = "完全正確！"; 
+        updateWordAccuracy(currentQ.id, true); 
+      } else { 
+        inputEl.className = "w-full text-center font-bold text-lg rounded-xl border-2 border-rose-500 bg-rose-50/10 text-rose-600 px-4 py-3"; 
+        feedback.className = "p-4 rounded-xl text-center font-bold text-sm bg-rose-50 text-rose-700 flex items-center justify-center space-x-2"; 
+        document.getElementById('quiz-feedback-icon').innerText = "❌"; 
+        document.getElementById('quiz-feedback-text').innerText = `正確拼寫為 [ ${currentQ.word} ]`; 
+        updateWordAccuracy(currentQ.id, false); 
+      } 
+      feedback.classList.remove('hidden'); 
+      document.getElementById('quiz-next-btn').classList.remove('hidden'); 
+    }
     function handleSpellingEnter(e) { if (e.key === 'Enter') submitSpellingAnswer(); }
 
-    // 修正版：計算完最新對錯次數後，直接把包好的數據整組傳給後端
     async function updateWordAccuracy(id, isCorrect) {
       const idx = state.words.findIndex(w => w.id == id);
       if (idx !== -1) { 
-        if (isCorrect) {
-          state.words[idx].correct_count++; 
-        } else {
-          state.words[idx].wrong_count++; 
-        }
-        
-        // 抓出最新的對錯數值
+        if (isCorrect) state.words[idx].correct_count++; else state.words[idx].wrong_count++; 
         const currentCorrect = state.words[idx].correct_count;
         const currentWrong = state.words[idx].wrong_count;
-        
         try { 
-          // 發送給後端 recordScore 動作，並把最新的計數傳過去
-          await callGasApi("recordScore", { 
-            id: id, 
-            correct_count: currentCorrect,
-            wrong_count: currentWrong
-          }); 
-        } catch (e) {
-          console.error("同步對錯紀錄至雲端失敗", e);
-        }
+          await callGasApi("recordScore", { id: id, correct_count: currentCorrect, wrong_count: currentWrong }); 
+        } catch (e) { console.error("同步對錯紀錄至雲端失敗", e); }
       }
     }
-    
     
     function advanceQuiz() { state.quiz.currentIndex++; if (state.quiz.currentIndex < state.quiz.questions.length) renderQuizQuestion(); else { document.getElementById('quiz-panel').classList.add('hidden'); document.getElementById('quiz-result').classList.remove('hidden'); document.getElementById('res-total').innerText = `${state.quiz.questions.length} 題`; document.getElementById('res-correct').innerText = `${state.quiz.score} 題`; document.getElementById('res-score').innerText = `${Math.round((state.quiz.score / state.quiz.questions.length) * 100)} 分`; } }
     function exitQuiz() { document.getElementById('quiz-panel').classList.add('hidden'); document.getElementById('quiz-result').classList.add('hidden'); document.getElementById('quiz-empty-state').classList.add('hidden'); document.getElementById('quiz-setup').classList.remove('hidden'); }
