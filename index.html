@@ -213,8 +213,8 @@
       </div>
     </section>
 
-    <!-- 3. 測驗挑戰區 -->
-    <section id="tab-content-quiz" class="space-y-6 hidden pb-24">
+    <!-- 3. 測驗挑戰區 (精準縮減空間，防阻手機滾動) -->
+    <section id="tab-content-quiz" class="space-y-4 hidden pb-24">
       <div class="max-w-md mx-auto relative">
         <div id="quiz-setup" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-5">
           <div class="text-center"><h3 class="font-bold text-slate-800 text-xl">📝 智慧英文挑戰區</h3></div>
@@ -243,8 +243,8 @@
           <button onclick="startQuiz()" class="w-full bg-brand-600 text-white font-semibold py-3 rounded-xl text-sm shadow-md">開始挑戰</button>
         </div>
 
-        <!-- 測驗進行主面板 -->
-        <div id="quiz-panel" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+        <!-- 測驗進行主面板 (由原 space-y-6 優化調降為 space-y-3.5) -->
+        <div id="quiz-panel" class="hidden bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-3.5">
           <div class="flex items-center justify-between text-xs font-semibold text-slate-400">
             <span id="quiz-progress-text">題數: 0 / 0</span>
             <span id="quiz-score-text" class="text-emerald-600">正確率: 0%</span>
@@ -252,21 +252,23 @@
           <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
             <div id="quiz-progress-bar" class="bg-brand-500 h-full transition-all duration-300 w-0"></div>
           </div>
-          <div class="bg-slate-50/50 border border-slate-100 p-6 rounded-xl text-center space-y-3 relative">
-            <button onclick="speakQuizQuestion()" id="qz-speaker-btn" class="absolute top-3 right-3 p-2 rounded-full bg-white text-slate-400">🔊</button>
-            <div class="space-y-1"><span id="quiz-hint-label" class="text-[10px] bg-indigo-50 text-indigo-600 font-bold px-2 py-0.5 rounded-full">翻譯</span></div>
-            <h2 id="quiz-question-title" class="font-bold text-slate-800 text-3xl tracking-wide break-words">apple</h2>
-            <p id="quiz-question-hint" class="text-xs text-slate-400 font-medium">/.../</p>
+          
+          <!-- 核心空間改進：深度擠壓題目字卡 (p-6 改為 py-3 px-4)，並整合提示排版 -->
+          <div class="bg-slate-50/60 border border-slate-100 py-3 px-4 rounded-xl text-center relative">
+            <button onclick="speakQuizQuestion()" id="qz-speaker-btn" class="absolute top-2.5 right-2.5 p-1.5 rounded-full bg-white text-slate-400 shadow-sm text-sm hover:text-slate-700">🔊</button>
+            <div class="mb-1"><span id="quiz-hint-label" class="text-[9px] bg-indigo-50 text-indigo-600 font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">單字釋義</span></div>
+            <h2 id="quiz-question-title" class="font-bold text-slate-900 text-2.5xl tracking-wide break-words leading-tight max-w-[85%] mx-auto">apple</h2>
+            <p id="quiz-question-hint" class="text-xs text-brand-600 font-semibold tracking-wide mt-0.5">/.../</p>
           </div>
 
-          <!-- 模式一：四選一 -->
-          <div id="quiz-options-container" class="grid grid-cols-1 gap-3"></div>
+          <!-- 模式一：四選一 (間距由 gap-3 優化調降為 gap-2) -->
+          <div id="quiz-options-container" class="grid grid-cols-1 gap-2"></div>
 
           <!-- 模式二與模式三：拼字 / 挖空共用輸入區 -->
           <div id="quiz-spelling-container" class="hidden space-y-3">
-            <div id="missing-clue-display" class="hidden text-center text-2xl font-extrabold text-indigo-600 tracking-widest bg-indigo-50/40 py-3 rounded-xl border border-indigo-100/60 font-mono select-none"></div>
-            <input type="text" id="quiz-spelling-input" onkeydown="handleSpellingEnter(event)" placeholder="請打入完整的英文單字/片語..." class="w-full text-center font-bold text-xl rounded-xl border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500">
-            <button onclick="submitSpellingAnswer()" class="w-full bg-indigo-600 text-white font-semibold py-3 rounded-xl text-sm shadow-sm">送出答案</button>
+            <div id="missing-clue-display" class="hidden text-center text-xl font-extrabold text-indigo-600 tracking-widest bg-indigo-50/40 py-2.5 rounded-xl border border-indigo-100/60 font-mono select-none"></div>
+            <input type="text" id="quiz-spelling-input" autocorrect="off" autocapitalize="none" spellcheck="false" onkeydown="handleSpellingEnter(event)" placeholder="請在此輸入英文拼音..." class="w-full text-center font-bold text-lg rounded-xl border border-slate-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <button onclick="submitSpellingAnswer()" class="w-full bg-indigo-600 text-white font-semibold py-2.5 rounded-xl text-sm shadow-sm">送出答案</button>
           </div>
         </div>
 
@@ -284,7 +286,7 @@
         </div>
       </div>
 
-      <!-- 核心修復與升級：對錯字卡與下一題「全面合體」的底部固定彩色按鈕條 (Sticky Bottom Interactive Bar) -->
+      <!-- 底部固定彩色合體按鈕條 -->
       <div id="sticky-next-bar" class="hidden fixed bottom-[53px] left-0 right-0 md:bottom-4 bg-white/90 backdrop-blur-md border-t border-slate-200/80 p-3.5 z-40 flex justify-center items-center shadow-[0_-10px_25px_-5px_rgba(0,0,0,0.1)] transition-all duration-300">
         <button onclick="advanceQuiz()" id="sticky-next-btn" class="w-full max-w-md text-white font-bold py-3.5 rounded-xl text-sm flex items-center justify-center space-x-2 active:scale-[0.97] transition-all shadow-md">
           <span id="sticky-next-text">下一題 (Next)</span>
@@ -395,9 +397,9 @@
         return await response.json();
       } catch (e) {
         return [
-          { id: 1, word: "safeguard", kk: "/ˈseɪf.ɡɑːrd/", translation: "保護；捍衛；安全防護", is_starred: true, correct_count: 2, wrong_count: 0, folder: "核心單字" },
-          { id: 2, word: "substitute", kk: "/ˈsʌb.stə.tuːt/", translation: "代替；替代品", is_starred: false, correct_count: 5, wrong_count: 1, folder: "日常單字" },
-          { id: 3, word: "turn out to be", kk: "/tɝn aʊt tu bi/", translation: "結果竟然是...", is_starred: true, correct_count: 0, wrong_count: 0, folder: "重要片語" }
+          { id: 1, word: "vulnerable", kk: "/ˈvʌl.nɚ.ə.bəl/", translation: "脆弱的，易受攻擊的", is_starred: true, correct_count: 2, wrong_count: 0, folder: "核心單字" },
+          { id: 2, word: "safeguard", kk: "/ˈseɪf.ɡɑːrd/", translation: "保護；捍衛；安全防護", is_starred: true, correct_count: 2, wrong_count: 0, folder: "核心單字" },
+          { id: 3, word: "substitute", kk: "/ˈsʌb.stə.tuːt/", translation: "代替；替代品", is_starred: false, correct_count: 5, wrong_count: 1, folder: "日常單字" }
         ];
       }
     }
@@ -646,7 +648,7 @@
     function prevFlashcard() { state.flashcardIndex = (state.flashcardIndex - 1 + state.words.length) % state.words.length; initFlashcards(); }
 
     // ==========================================
-    // 智慧英文單字挑戰控制邏輯 (全新整合改版)
+    // 智慧英文單字挑戰控制邏輯
     // ==========================================
     function setQuizMode(mode) { 
       state.quiz.mode = mode; 
@@ -715,7 +717,7 @@
         
         options.forEach(opt => {
           const btn = document.createElement('button');
-          btn.className = "w-full text-left p-4 rounded-xl border border-slate-200 hover:bg-indigo-50/40 font-semibold text-slate-700 transition-colors shadow-sm bg-white";
+          btn.className = "w-full text-left py-2.5 px-4 rounded-xl border border-slate-200 hover:bg-indigo-50/40 font-semibold text-slate-700 transition-colors shadow-sm bg-white text-sm";
           btn.innerHTML = `<span>${opt.translation}</span>`;
           btn.onclick = () => submitChoiceAnswer(opt, btn);
           choiceBox.appendChild(btn);
@@ -733,7 +735,7 @@
         missingClueBox.innerText = state.quiz.missingClue;
         
         const inputEl = document.getElementById('quiz-spelling-input');
-        inputEl.value = ""; inputEl.disabled = false; inputEl.className = "w-full text-center font-bold text-xl rounded-xl border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500";
+        inputEl.value = ""; inputEl.disabled = false; inputEl.className = "w-full text-center font-bold text-lg rounded-xl border border-slate-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500";
         setTimeout(() => inputEl.focus(), 150);
       } 
       else {
@@ -743,13 +745,12 @@
         document.getElementById('quiz-question-hint').innerText = currentQ.kk || '/ 暫無音標 /';
         
         const inputEl = document.getElementById('quiz-spelling-input');
-        inputEl.value = ""; inputEl.disabled = false; inputEl.className = "w-full text-center font-bold text-xl rounded-xl border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500";
+        inputEl.value = ""; inputEl.disabled = false; inputEl.className = "w-full text-center font-bold text-lg rounded-xl border border-slate-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500";
         setTimeout(() => inputEl.focus(), 150);
       }
       setTimeout(() => { speakWord(currentQ.word); }, 300);
     }
 
-    // 核心修復與優化：合體對錯回饋與下一題按鈕，並加上自動發音
     function submitChoiceAnswer(selectedOpt, btnElement) {
       if (state.quiz.isAnswered) return; state.quiz.isAnswered = true;
       const currentQ = state.quiz.questions[state.quiz.currentIndex];
@@ -759,27 +760,20 @@
       const stickyBtn = document.getElementById('sticky-next-btn');
       const stickyTxt = document.getElementById('sticky-next-text');
 
-      // 核心修正：觸發自動發音
       speakWord(currentQ.word);
 
       if (selectedOpt.id === currentQ.id) {
         state.quiz.score++;
-        btnElement.className = "w-full text-left p-4 rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-800 font-bold shadow-sm";
-        
-        // 底部懸浮按鈕變為綠色「答對狀態」
+        btnElement.className = "w-full text-left py-2.5 px-4 rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-800 font-bold shadow-sm text-sm";
         stickyBtn.className = "w-full max-w-md bg-emerald-600 text-white font-extrabold py-3.5 rounded-xl text-sm flex items-center justify-center space-x-2 active:scale-[0.97] transition-all shadow-md shadow-emerald-100";
         stickyTxt.innerText = "🎉 回答正確！ 下一題 ➡";
-        
         updateWordAccuracy(currentQ.id, true);
       } else {
-        btnElement.className = "w-full text-left p-4 rounded-xl border-2 border-rose-500 bg-rose-50 text-rose-800 font-bold shadow-sm";
-        
-        // 底部懸浮按鈕變為紅色「答錯狀態」，並精簡呈現正解，完全無需滑動畫面
+        btnElement.className = "w-full text-left py-2.5 px-4 rounded-xl border-2 border-rose-500 bg-rose-50 text-rose-800 font-bold shadow-sm text-sm";
         stickyBtn.className = "w-full max-w-md bg-rose-600 text-white font-extrabold py-3.5 rounded-xl text-sm flex items-center justify-center space-x-2 active:scale-[0.97] transition-all shadow-md shadow-rose-100";
         stickyTxt.innerText = `❌ 正解：${currentQ.translation.split('；')[0].split('，')[0]} / 下一題 ➡`;
-        
         updateWordAccuracy(currentQ.id, false);
-        allBtns.forEach(b => { if(b.innerText.includes(currentQ.translation)) b.className = "w-full text-left p-4 rounded-xl border-2 border-emerald-500 text-emerald-700 font-bold bg-white shadow-sm"; });
+        allBtns.forEach(b => { if(b.innerText.includes(currentQ.translation)) b.className = "w-full text-left py-2.5 px-4 rounded-xl border-2 border-emerald-500 text-emerald-700 font-bold bg-white shadow-sm text-sm"; });
       }
       stickyBar.classList.remove('hidden'); 
     }
@@ -798,18 +792,14 @@
 
       if (inputEl.value.trim().toLowerCase() === currentQ.word.trim().toLowerCase()) {
         state.quiz.score++;
-        inputEl.className = "w-full text-center font-bold text-xl rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-600 px-4 py-3 focus:outline-none";
-        
+        inputEl.className = "w-full text-center font-bold text-lg rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-600 px-4 py-2.5 focus:outline-none";
         stickyBtn.className = "w-full max-w-md bg-emerald-600 text-white font-extrabold py-3.5 rounded-xl text-sm flex items-center justify-center space-x-2 active:scale-[0.97] transition-all shadow-md";
         stickyTxt.innerText = "🏆 拼寫完全正確！ 下一題 ➡";
-        
         updateWordAccuracy(currentQ.id, true);
       } else {
-        inputEl.className = "w-full text-center font-bold text-xl rounded-xl border-2 border-rose-500 bg-rose-50 text-rose-600 px-4 py-3 focus:outline-none";
-        
+        inputEl.className = "w-full text-center font-bold text-lg rounded-xl border-2 border-rose-500 bg-rose-50 text-rose-600 px-4 py-2.5 focus:outline-none";
         stickyBtn.className = "w-full max-w-md bg-rose-600 text-white font-extrabold py-3.5 rounded-xl text-sm flex items-center justify-center space-x-2 active:scale-[0.97] transition-all shadow-md";
         stickyTxt.innerText = `❌ 正確是：[ ${currentQ.word} ] / 下一題 ➡`;
-        
         updateWordAccuracy(currentQ.id, false);
       }
       stickyBar.classList.remove('hidden'); 
@@ -825,7 +815,6 @@
       } else {
         document.getElementById('quiz-panel').classList.add('hidden');
         document.getElementById('sticky-next-bar').classList.add('hidden'); 
-        
         const resBox = document.getElementById('quiz-result'); resBox.classList.remove('hidden');
         document.getElementById('res-total').innerText = `${state.quiz.questions.length} 題`;
         document.getElementById('res-correct').innerText = `${state.quiz.score} 題`;
