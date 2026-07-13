@@ -173,7 +173,7 @@
           <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-2.5 text-xs">
             <div class="flex items-center justify-between">
               <span class="text-slate-500 font-medium">📁 選擇資料夾：</span>
-              <select id="flashcard-folder-select" onchange="resetFlashcardIndex(); initFlashcards();" class="font-semibold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-slate-700 focus:outline-none max-w-[200px]"></select>
+              <select id="flashcard-folder-select" onchange="state.selectedFolder = this.value; resetFlashcardIndex(); initFlashcards();" class="font-semibold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-slate-700 focus:outline-none max-w-[200px]"></select>
             </div>
           </div>
         </div>
@@ -225,13 +225,13 @@
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-400 uppercase mb-1.5">出題資料夾範圍</label>
-              <select id="quiz-folder-select" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none"></select>
+              <select id="quiz-folder-select" onchange="state.selectedFolder = this.value;" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none"></select>
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-400 uppercase mb-1.5">設定考試題數</label>
               <select id="quiz-count-select" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none">
-                <option value="20" selected>20 題</option>
-                <option value="50">50 題</option>
+                <option value="20">20 題</option>
+                <option value="50" selected>50 題</option>
                 <option value="80">80 題</option>
                 <option value="100">100 題</option>
               </select>
@@ -409,6 +409,13 @@
       const datalist = document.getElementById('existing-folders-list');
       if (datalist) datalist.innerHTML = sortedFolders.map(f => `<option value="${f}"></option>`).join('');
 
+      // 智慧預設最後一個資料夾邏輯
+      if (sortedFolders.length > 0 && (state.selectedFolder === 'ALL_WORDS' || !folders.has(state.selectedFolder))) {
+        const lastFolder = sortedFolders[sortedFolders.length - 1];
+        state.selectedFolder = lastFolder;
+        state.quiz.folder = lastFolder;
+      }
+
       const sidebar = document.getElementById('folders-sidebar-list');
       if (sidebar) {
         sidebar.innerHTML = "";
@@ -429,7 +436,9 @@
       }
       const fcSelect = document.getElementById('flashcard-folder-select');
       const qzSelect = document.getElementById('quiz-folder-select');
-      const htmlOptions = `<option value="ALL_WORDS">全部資料夾 (${state.words.length})</option>` + sortedFolders.map(f => `<option value="${f}">${f} (${state.words.filter(w=>w.folder===f).length})</option>`).join('');
+      
+      const htmlOptions = sortedFolders.map(f => `<option value="${f}" ${state.selectedFolder === f ? 'selected' : ''}>${f} (${state.words.filter(w=>w.folder===f).length})</option>`).join('') + `<option value="ALL_WORDS" ${state.selectedFolder === 'ALL_WORDS' ? 'selected' : ''}>全部資料夾 (${state.words.length})</option>`;
+      
       if(fcSelect) fcSelect.innerHTML = htmlOptions;
       if(qzSelect) qzSelect.innerHTML = htmlOptions;
     }
@@ -623,11 +632,12 @@
     function resetFlashcardIndex() { state.flashcardIndex = 0; }
     function initFlashcards() {
       let p = state.words;
-      const f = document.getElementById('flashcard-folder-select').value;
+      const f = state.selectedFolder;
       if (f && f !== 'ALL_WORDS') p = p.filter(w => w.folder === f);
       const cardEl = document.getElementById('flashcard-element');
       if(p.length === 0) { cardEl.parentElement.classList.add('hidden'); return; }
       cardEl.parentElement.classList.remove('hidden');
+      if (state.flashcardIndex >= p.length) state.flashcardIndex = 0;
       const cur = p[state.flashcardIndex];
       cardEl.classList.remove('flipped');
       document.getElementById('fc-word').innerText = cur.word;
@@ -637,8 +647,20 @@
       document.getElementById('fc-index-display-back').innerText = `${state.flashcardIndex+1}/${p.length}`;
     }
     function flipFlashcard() { document.getElementById('flashcard-element').classList.toggle('flipped'); }
-    function nextFlashcard() { state.flashcardIndex = (state.flashcardIndex + 1) % state.words.length; initFlashcards(); }
-    function prevFlashcard() { state.flashcardIndex = (state.flashcardIndex - 1 + state.words.length) % state.words.length; initFlashcards(); }
+    function nextFlashcard() { 
+      let p = state.words;
+      if (state.selectedFolder !== 'ALL_WORDS') p = p.filter(w => w.folder === state.selectedFolder);
+      if(p.length === 0) return;
+      state.flashcardIndex = (state.flashcardIndex + 1) % p.length; 
+      initFlashcards(); 
+    }
+    function prevFlashcard() { 
+      let p = state.words;
+      if (state.selectedFolder !== 'ALL_WORDS') p = p.filter(w => w.folder === state.selectedFolder);
+      if(p.length === 0) return;
+      state.flashcardIndex = (state.flashcardIndex - 1 + p.length) % p.length; 
+      initFlashcards(); 
+    }
 
     // ==========================================
     // 智慧英文單字挑戰控制邏輯
@@ -663,10 +685,10 @@
     }
 
     function startQuiz() {
-      const chosenF = document.getElementById('quiz-folder-select').value;
+      const chosenF = state.selectedFolder;
       let pool = state.words;
       if (chosenF && chosenF !== 'ALL_WORDS') pool = pool.filter(w => w.folder === chosenF);
-      const targetCount = parseInt(document.getElementById('quiz-count-select').value, 10) || 20;
+      const targetCount = parseInt(document.getElementById('quiz-count-select').value, 10) || 50;
 
       if (pool.length < (state.quiz.mode === 'choice' ? 4 : 1)) {
         showToast(state.quiz.mode === 'choice' ? `四選一模式該分類單字庫至少需要 4 個單字` : "該範圍沒有單字可測驗！", "⚠️");
@@ -825,4 +847,4 @@
     }
   </script>
 </body>
-                  </html>
+</html>
