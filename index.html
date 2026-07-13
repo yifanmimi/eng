@@ -230,9 +230,10 @@
             <div>
               <label class="block text-xs font-bold text-slate-400 uppercase mb-1.5">設定考試題數</label>
               <select id="quiz-count-select" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none">
-                <option value="5">5 題</option>
-                <option value="10" selected>10 題</option>
-                <option value="20">20 題</option>
+              <option value="20" selected>20 題</option>
+              <option value="50">50 題</option>
+              <option value="80">80 題</option>
+              <option value="100">100 題</option>
               </select>
             </div>
           </div>
@@ -665,7 +666,7 @@
       const chosenF = document.getElementById('quiz-folder-select').value;
       let pool = state.words;
       if (chosenF && chosenF !== 'ALL_WORDS') pool = pool.filter(w => w.folder === chosenF);
-      const targetCount = parseInt(document.getElementById('quiz-count-select').value, 10) || 10;
+      const targetCount = parseInt(document.getElementById('quiz-count-select').value, 10) || 20;
 
       if (pool.length < (state.quiz.mode === 'choice' ? 4 : 1)) {
         showToast(state.quiz.mode === 'choice' ? `四選一模式該分類單字庫至少需要 4 個單字` : "該範圍沒有單字可測驗！", "⚠️");
